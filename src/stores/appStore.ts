@@ -149,7 +149,7 @@ export const useAppStore = create<AppState>()(
         
         const newInstance: Instance = {
           id,
-          name: name || `实例 ${instanceCount + 1}`,
+          name: name || `多开 ${instanceCount + 1}`,
           selectedTasks: defaultTasks,
           isRunning: false,
         };

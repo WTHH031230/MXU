@@ -140,7 +140,7 @@ export default {
 
   // 实例
   instance: {
-    defaultName: '实例 1',
+    defaultName: '多开 1',
   },
 
   // 错误消息

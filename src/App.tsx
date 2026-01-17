@@ -25,17 +25,20 @@ const isTauri = () => {
  * 设置窗口标题
  */
 async function setWindowTitle(title: string) {
+  // 同时设置 document.title（对浏览器和 Tauri 都有效）
+  document.title = title;
+  
   if (isTauri()) {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
       const currentWindow = getCurrentWindow();
+      console.log('设置窗口标题:', title, currentWindow);
       await currentWindow.setTitle(title);
+      console.log('窗口标题设置成功');
     } catch (err) {
-      console.warn('设置窗口标题失败:', err);
+      console.error('设置窗口标题失败:', err);
     }
   }
-  // 同时设置 document.title（对浏览器和 Tauri 都有效）
-  document.title = title;
 }
 
 function App() {
@@ -119,7 +122,7 @@ function App() {
       setTimeout(() => {
         const currentInstances = useAppStore.getState().instances;
         if (currentInstances.length === 0) {
-          createInstance(t('instance.defaultName', '实例 1'));
+          createInstance(t('instance.defaultName', '多开 1'));
         }
       }, 0);
     } catch (err) {
@@ -151,15 +154,42 @@ function App() {
     return <SettingsPage />;
   }
 
+  // 计算显示标题
+  const getDisplayTitle = () => {
+    if (!projectInterface) return { title: 'MXU', subtitle: 'MaaFramework 下一代通用 GUI' };
+    
+    const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
+    const translations = interfaceTranslations[langKey];
+    
+    // 优先使用 title 字段，否则使用 label/name + version
+    let title: string;
+    if (projectInterface.title) {
+      title = resolveI18nText(projectInterface.title, translations);
+    } else {
+      const name = resolveI18nText(projectInterface.label, translations) || projectInterface.name;
+      const version = projectInterface.version;
+      title = version ? `${name} v${version}` : name;
+    }
+    
+    // 副标题：使用 description 或默认
+    const subtitle = projectInterface.description 
+      ? resolveI18nText(projectInterface.description, translations)
+      : 'MaaFramework 下一代通用 GUI';
+    
+    return { title, subtitle };
+  };
+
   // 加载中或错误状态
   if (loadingState !== 'success' || !projectInterface) {
+    const { title: displayTitle, subtitle: displaySubtitle } = getDisplayTitle();
+    
     return (
       <div className="h-full flex flex-col items-center justify-center bg-bg-primary p-8">
         <div className="max-w-md w-full space-y-6 text-center">
           {/* Logo/标题 */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-text-primary">MXU</h1>
-            <p className="text-text-secondary">MaaFramework 通用 GUI</p>
+            <h1 className="text-3xl font-bold text-text-primary">{displayTitle}</h1>
+            <p className="text-text-secondary">{displaySubtitle}</p>
           </div>
 
           {/* 加载状态 */}

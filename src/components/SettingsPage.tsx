@@ -8,11 +8,18 @@ import {
   Mail,
   FileText,
   Loader2,
+  Bug,
+  RefreshCw,
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { setLanguage as setI18nLanguage } from '@/i18n';
-import { resolveContent, resolveIconPath, simpleMarkdownToHtml } from '@/services/contentResolver';
+import { resolveContent, resolveIconPath, simpleMarkdownToHtml, resolveI18nText } from '@/services/contentResolver';
 import clsx from 'clsx';
+
+// 检测是否在 Tauri 环境中
+const isTauri = () => {
+  return typeof window !== 'undefined' && '__TAURI__' in window;
+};
 
 interface ResolvedContent {
   description: string;
@@ -32,7 +39,6 @@ export function SettingsPage() {
     projectInterface,
     interfaceTranslations,
     basePath,
-    resolveI18nText,
   } = useAppStore();
 
   const [resolvedContent, setResolvedContent] = useState<ResolvedContent>({
@@ -42,6 +48,7 @@ export function SettingsPage() {
     iconPath: undefined,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
 
   const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
   const translations = interfaceTranslations[langKey];
@@ -75,8 +82,24 @@ export function SettingsPage() {
     setI18nLanguage(lang);
   };
 
+  // 调试：添加日志
+  const addDebugLog = (msg: string) => {
+    setDebugLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  };
+
+  // 调试：刷新 UI
+  const handleRefreshUI = () => {
+    addDebugLog('刷新 UI...');
+    window.location.reload();
+  };
+
+  // 调试：清空日志
+  const handleClearLog = () => {
+    setDebugLog([]);
+  };
+
   const projectName =
-    resolveI18nText(projectInterface?.label, langKey) ||
+    resolveI18nText(projectInterface?.label, translations) ||
     projectInterface?.name ||
     'MXU';
   const version = projectInterface?.version || '0.1.0';
@@ -179,6 +202,49 @@ export function SettingsPage() {
                   {t('settings.themeDark')}
                 </button>
               </div>
+            </div>
+          </section>
+
+          {/* 调试 */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
+              <Bug className="w-4 h-4" />
+              调试
+            </h2>
+            
+            <div className="bg-bg-secondary rounded-xl p-4 border border-border space-y-4">
+              {/* 环境信息 */}
+              <div className="text-sm text-text-secondary space-y-1">
+                <p>环境: <span className="font-mono text-text-primary">{isTauri() ? 'Tauri 桌面应用' : '浏览器'}</span></p>
+                <p>__TAURI__: <span className="font-mono text-text-primary">{String('__TAURI__' in window)}</span></p>
+                <p>projectInterface: <span className="font-mono text-text-primary">{projectInterface ? '已加载' : '未加载'}</span></p>
+              </div>
+              
+              {/* 操作按钮 */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleRefreshUI}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-bg-tertiary hover:bg-bg-hover rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  刷新 UI
+                </button>
+                <button
+                  onClick={handleClearLog}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-bg-tertiary hover:bg-bg-hover rounded-lg transition-colors"
+                >
+                  清空日志
+                </button>
+              </div>
+              
+              {/* 调试日志 */}
+              {debugLog.length > 0 && (
+                <div className="bg-bg-tertiary rounded-lg p-3 max-h-40 overflow-y-auto">
+                  <pre className="text-xs font-mono text-text-secondary whitespace-pre-wrap">
+                    {debugLog.join('\n')}
+                  </pre>
+                </div>
+              )}
             </div>
           </section>
 

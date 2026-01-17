@@ -140,7 +140,7 @@ export default {
 
   // Instance
   instance: {
-    defaultName: 'Instance 1',
+    defaultName: 'Multi 1',
   },
 
   // Error messages
