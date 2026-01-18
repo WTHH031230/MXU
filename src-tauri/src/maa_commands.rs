@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::maa_ffi::{
-    from_cstr, get_maa_version, init_maa_library, to_cstring, MaaAgentClient, MaaController,
-    MaaImageBuffer, MaaLibrary, MaaResource, MaaTasker, MaaToolkitAdbDeviceList,
+    from_cstr, get_event_callback, get_maa_version, init_maa_library, to_cstring, MaaAgentClient,
+    MaaController, MaaImageBuffer, MaaLibrary, MaaResource, MaaTasker, MaaToolkitAdbDeviceList,
     MaaToolkitDesktopWindowList, MAA_CTRL_OPTION_SCREENSHOT_TARGET_SHORT_SIDE,
     MAA_GAMEPAD_TYPE_DUALSHOCK4, MAA_GAMEPAD_TYPE_XBOX360, MAA_INVALID_ID, MAA_LIBRARY,
     MAA_STATUS_PENDING, MAA_STATUS_RUNNING, MAA_STATUS_SUCCEEDED,
@@ -433,14 +433,15 @@ pub fn maa_destroy_instance(state: State<MaaState>, instance_id: String) -> Resu
     Ok(())
 }
 
-/// 连接控制器
+/// 连接控制器（异步，通过回调通知完成状态）
+/// 返回连接请求 ID，前端通过监听 maa-callback 事件获取完成状态
 #[tauri::command]
-pub async fn maa_connect_controller(
+pub fn maa_connect_controller(
     state: State<'_, MaaState>,
     instance_id: String,
     config: ControllerConfig,
     agent_path: Option<String>,
-) -> Result<(), String> {
+) -> Result<i64, String> {
     println!("[MaaCommands] maa_connect_controller called");
     println!("[MaaCommands] instance_id: {}", instance_id);
     println!("[MaaCommands] config: {:?}", config);
@@ -529,6 +530,12 @@ pub async fn maa_connect_controller(
     
     println!("[MaaCommands] Controller created successfully: {:?}", controller);
     
+    // 添加回调 Sink，用于接收连接状态通知
+    println!("[MaaCommands] Adding controller sink...");
+    unsafe {
+        (lib.maa_controller_add_sink)(controller, get_event_callback(), std::ptr::null_mut());
+    }
+    
     // 设置默认截图分辨率
     println!("[MaaCommands] Setting screenshot target short side to 720...");
     unsafe {
@@ -541,10 +548,16 @@ pub async fn maa_connect_controller(
         );
     }
     
-    // 发起连接
+    // 发起连接（不等待，通过回调通知完成）
     println!("[MaaCommands] Calling MaaControllerPostConnection...");
     let conn_id = unsafe { (lib.maa_controller_post_connection)(controller) };
     println!("[MaaCommands] MaaControllerPostConnection returned conn_id: {}", conn_id);
+    
+    if conn_id == MAA_INVALID_ID {
+        println!("[MaaCommands] Failed to post connection");
+        unsafe { (lib.maa_controller_destroy)(controller); }
+        return Err("Failed to post connection".to_string());
+    }
     
     // 更新实例状态
     println!("[MaaCommands] Updating instance state...");
@@ -562,29 +575,7 @@ pub async fn maa_connect_controller(
         instance.connection_status = ConnectionStatus::Connecting;
     }
     
-    // 释放锁后等待连接
-    drop(guard);
-    
-    // 等待连接完成（在实际应用中应该使用异步轮询）
-    println!("[MaaCommands] Waiting for connection to complete...");
-    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
-    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
-    
-    let status = unsafe { (lib.maa_controller_wait)(controller, conn_id) };
-    println!("[MaaCommands] MaaControllerWait returned status: {}", status);
-    
-    let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
-    let instance = instances.get_mut(&instance_id).ok_or("Instance not found")?;
-    
-    if status == MAA_STATUS_SUCCEEDED {
-        println!("[MaaCommands] Connection succeeded!");
-        instance.connection_status = ConnectionStatus::Connected;
-        Ok(())
-    } else {
-        println!("[MaaCommands] Connection failed with status: {}", status);
-        instance.connection_status = ConnectionStatus::Failed("Connection failed".to_string());
-        Err("Controller connection failed".to_string())
-    }
+    Ok(conn_id)
 }
 
 /// 获取连接状态
@@ -595,13 +586,16 @@ pub fn maa_get_connection_status(state: State<MaaState>, instance_id: String) ->
     Ok(instance.connection_status.clone())
 }
 
-/// 加载资源
+/// 加载资源（异步，通过回调通知完成状态）
+/// 返回资源加载请求 ID 列表，前端通过监听 maa-callback 事件获取完成状态
 #[tauri::command]
-pub async fn maa_load_resource(
+pub fn maa_load_resource(
     state: State<'_, MaaState>,
     instance_id: String,
     paths: Vec<String>,
-) -> Result<(), String> {
+) -> Result<Vec<i64>, String> {
+    println!("[MaaCommands] maa_load_resource called, instance: {}, paths: {:?}", instance_id, paths);
+    
     let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
     let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
     
@@ -615,38 +609,34 @@ pub async fn maa_load_resource(
             if res.is_null() {
                 return Err("Failed to create resource".to_string());
             }
+            
+            // 添加回调 Sink，用于接收资源加载状态通知
+            println!("[MaaCommands] Adding resource sink...");
+            unsafe {
+                (lib.maa_resource_add_sink)(res, get_event_callback(), std::ptr::null_mut());
+            }
+            
             instance.resource = Some(res);
         }
         
         instance.resource.unwrap()
     };
     
-    // 加载资源
-    let mut last_id = MAA_INVALID_ID;
+    // 加载资源（不等待，通过回调通知完成）
+    let mut res_ids = Vec::new();
     for path in &paths {
         let path_c = to_cstring(path);
-        last_id = unsafe { (lib.maa_resource_post_bundle)(resource, path_c.as_ptr()) };
+        let res_id = unsafe { (lib.maa_resource_post_bundle)(resource, path_c.as_ptr()) };
+        println!("[MaaCommands] Posted resource bundle: {} -> id: {}", path, res_id);
+        
+        if res_id == MAA_INVALID_ID {
+            println!("[MaaCommands] Failed to post resource bundle: {}", path);
+            continue;
+        }
+        res_ids.push(res_id);
     }
     
-    // 释放锁后等待
-    drop(guard);
-    
-    // 等待资源加载
-    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
-    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
-    
-    let status = unsafe { (lib.maa_resource_wait)(resource, last_id) };
-    
-    let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
-    let instance = instances.get_mut(&instance_id).ok_or("Instance not found")?;
-    
-    if status == MAA_STATUS_SUCCEEDED {
-        instance.resource_loaded = true;
-        Ok(())
-    } else {
-        instance.resource_loaded = false;
-        Err("Resource loading failed".to_string())
-    }
+    Ok(res_ids)
 }
 
 /// 检查资源是否已加载
@@ -657,14 +647,17 @@ pub fn maa_is_resource_loaded(state: State<MaaState>, instance_id: String) -> Re
     Ok(instance.resource_loaded)
 }
 
-/// 运行任务
+/// 运行任务（异步，通过回调通知完成状态）
+/// 返回任务 ID，前端通过监听 maa-callback 事件获取完成状态
 #[tauri::command]
-pub async fn maa_run_task(
+pub fn maa_run_task(
     state: State<'_, MaaState>,
     instance_id: String,
     entry: String,
     pipeline_override: String,
 ) -> Result<i64, String> {
+    println!("[MaaCommands] maa_run_task called, instance: {}, entry: {}", instance_id, entry);
+    
     let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
     let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
     
@@ -680,6 +673,12 @@ pub async fn maa_run_task(
             let tasker = unsafe { (lib.maa_tasker_create)() };
             if tasker.is_null() {
                 return Err("Failed to create tasker".to_string());
+            }
+            
+            // 添加回调 Sink，用于接收任务状态通知
+            println!("[MaaCommands] Adding tasker sink...");
+            unsafe {
+                (lib.maa_tasker_add_sink)(tasker, get_event_callback(), std::ptr::null_mut());
             }
             
             // 绑定资源和控制器
@@ -700,7 +699,7 @@ pub async fn maa_run_task(
         return Err("Tasker not properly initialized".to_string());
     }
     
-    // 提交任务
+    // 提交任务（不等待，通过回调通知完成）
     let entry_c = to_cstring(&entry);
     let override_c = to_cstring(&pipeline_override);
     
@@ -708,37 +707,13 @@ pub async fn maa_run_task(
         (lib.maa_tasker_post_task)(tasker, entry_c.as_ptr(), override_c.as_ptr())
     };
     
+    println!("[MaaCommands] Posted task: {} -> id: {}", entry, task_id);
+    
     if task_id == MAA_INVALID_ID {
         return Err("Failed to post task".to_string());
     }
     
     Ok(task_id)
-}
-
-/// 等待任务完成
-#[tauri::command]
-pub async fn maa_wait_task(
-    state: State<'_, MaaState>,
-    instance_id: String,
-    task_id: i64,
-) -> Result<TaskStatus, String> {
-    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
-    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
-    
-    let tasker = {
-        let instances = state.instances.lock().map_err(|e| e.to_string())?;
-        let instance = instances.get(&instance_id).ok_or("Instance not found")?;
-        instance.tasker.ok_or("Tasker not created")?
-    };
-    
-    let status = unsafe { (lib.maa_tasker_wait)(tasker, task_id) };
-    
-    Ok(match status {
-        MAA_STATUS_PENDING => TaskStatus::Pending,
-        MAA_STATUS_RUNNING => TaskStatus::Running,
-        MAA_STATUS_SUCCEEDED => TaskStatus::Succeeded,
-        _ => TaskStatus::Failed,
-    })
 }
 
 /// 获取任务状态
@@ -822,27 +797,6 @@ pub fn maa_post_screencap(state: State<MaaState>, instance_id: String) -> Result
     }
     
     Ok(screencap_id)
-}
-
-/// 等待截图完成
-#[tauri::command]
-pub async fn maa_screencap_wait(
-    state: State<'_, MaaState>,
-    instance_id: String,
-    screencap_id: i64,
-) -> Result<bool, String> {
-    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
-    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
-    
-    let controller = {
-        let instances = state.instances.lock().map_err(|e| e.to_string())?;
-        let instance = instances.get(&instance_id).ok_or("Instance not found")?;
-        instance.controller.ok_or("Controller not connected")?
-    };
-    
-    let status = unsafe { (lib.maa_controller_wait)(controller, screencap_id) };
-    
-    Ok(status == MAA_STATUS_SUCCEEDED)
 }
 
 /// 获取缓存的截图（返回 base64 编码的 PNG 图像）
@@ -945,6 +899,12 @@ pub async fn maa_start_tasks(
             let tasker = unsafe { (lib.maa_tasker_create)() };
             if tasker.is_null() {
                 return Err("Failed to create tasker".to_string());
+            }
+            
+            // 添加回调 Sink，用于接收任务状态通知
+            println!("[MaaCommands] Adding tasker sink...");
+            unsafe {
+                (lib.maa_tasker_add_sink)(tasker, get_event_callback(), std::ptr::null_mut());
             }
             
             // 绑定资源和控制器

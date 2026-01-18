@@ -2,6 +2,7 @@
 // 封装 Tauri 命令调用，提供前端友好的 API
 
 import { invoke } from '@tauri-apps/api/core';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import type {
   AdbDevice,
   Win32Window,
@@ -14,6 +15,29 @@ import type {
 import { loggers } from '@/utils/logger';
 
 const log = loggers.maa;
+
+/** MaaFramework 回调事件载荷 */
+export interface MaaCallbackEvent {
+  /** 消息类型，如 "Resource.Loading.Succeeded", "Controller.Action.Succeeded", "Tasker.Task.Succeeded" */
+  message: string;
+  /** 详细数据 JSON 字符串 */
+  details: string;
+}
+
+/** 回调消息详情（通用字段） */
+export interface MaaCallbackDetails {
+  res_id?: number;
+  ctrl_id?: number;
+  task_id?: number;
+  path?: string;
+  type?: string;
+  hash?: string;
+  uuid?: string;
+  action?: string;
+  param?: unknown;
+  entry?: string;
+  name?: string;
+}
 
 // 检测是否在 Tauri 环境中
 const isTauri = () => {
@@ -97,34 +121,35 @@ export const maaService = {
   },
 
   /**
-   * 连接控制器
+   * 连接控制器（异步，通过回调通知完成状态）
    * @param instanceId 实例 ID
    * @param config 控制器配置
    * @param agentPath MaaAgentBinary 路径（可选）
+   * @returns 连接请求 ID，通过监听 maa-callback 事件获取完成状态
    */
   async connectController(
     instanceId: string,
     config: ControllerConfig,
     agentPath?: string
-  ): Promise<void> {
+  ): Promise<number> {
     log.info('连接控制器, 实例:', instanceId, '类型:', config.type);
     log.debug('控制器配置:', config);
     
     if (!isTauri()) {
-      log.warn('非 Tauri 环境，模拟连接延迟');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return;
+      log.warn('非 Tauri 环境，模拟连接');
+      return Math.floor(Math.random() * 10000);
     }
     
     try {
-      await invoke('maa_connect_controller', {
+      const ctrlId = await invoke<number>('maa_connect_controller', {
         instanceId,
         config,
         agentPath: agentPath || null,
       });
-      log.info('控制器连接成功');
+      log.info('控制器连接请求已发送, ctrlId:', ctrlId);
+      return ctrlId;
     } catch (err) {
-      log.error('控制器连接失败:', err);
+      log.error('控制器连接请求失败:', err);
       throw err;
     }
   },
@@ -139,17 +164,19 @@ export const maaService = {
   },
 
   /**
-   * 加载资源
+   * 加载资源（异步，通过回调通知完成状态）
    * @param instanceId 实例 ID
    * @param paths 资源路径列表
+   * @returns 资源加载请求 ID 列表，通过监听 maa-callback 事件获取完成状态
    */
-  async loadResource(instanceId: string, paths: string[]): Promise<void> {
+  async loadResource(instanceId: string, paths: string[]): Promise<number[]> {
     log.info('加载资源, 实例:', instanceId, '路径数:', paths.length);
     if (!isTauri()) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return;
+      return paths.map((_, i) => i + 1);
     }
-    return await invoke('maa_load_resource', { instanceId, paths });
+    const resIds = await invoke<number[]>('maa_load_resource', { instanceId, paths });
+    log.info('资源加载请求已发送, resIds:', resIds);
+    return resIds;
   },
 
   /**
@@ -178,22 +205,6 @@ export const maaService = {
       entry,
       pipelineOverride,
     });
-  },
-
-  /**
-   * 等待任务完成
-   * @param instanceId 实例 ID
-   * @param taskId 任务 ID
-   */
-  async waitTask(instanceId: string, taskId: number): Promise<TaskStatus> {
-    log.debug('等待任务完成, taskId:', taskId);
-    if (!isTauri()) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return 'Succeeded';
-    }
-    const status = await invoke<TaskStatus>('maa_wait_task', { instanceId, taskId });
-    log.info('任务完成, taskId:', taskId, '状态:', status);
-    return status;
   },
 
   /**
@@ -226,23 +237,15 @@ export const maaService = {
   },
 
   /**
-   * 发起截图请求
+   * 发起截图请求（异步，通过回调通知完成状态）
    * @param instanceId 实例 ID
-   * @returns 截图请求 ID
+   * @returns 截图请求 ID，通过监听 maa-callback 事件获取完成状态
    */
   async postScreencap(instanceId: string): Promise<number> {
     if (!isTauri()) return -1;
-    return await invoke<number>('maa_post_screencap', { instanceId });
-  },
-
-  /**
-   * 等待截图完成
-   * @param instanceId 实例 ID
-   * @param screencapId 截图请求 ID
-   */
-  async screencapWait(instanceId: string, screencapId: number): Promise<boolean> {
-    if (!isTauri()) return false;
-    return await invoke<boolean>('maa_screencap_wait', { instanceId, screencapId });
+    const screencapId = await invoke<number>('maa_post_screencap', { instanceId });
+    log.debug('截图请求已发送, screencapId:', screencapId);
+    return screencapId;
   },
 
   /**
@@ -289,6 +292,85 @@ export const maaService = {
     log.info('停止 Agent, 实例:', instanceId);
     if (!isTauri()) return;
     return await invoke('maa_stop_agent', { instanceId });
+  },
+
+  /**
+   * 监听 MaaFramework 回调事件
+   * @param callback 回调函数，接收消息类型和详情
+   * @returns 取消监听的函数
+   * 
+   * 常见消息类型：
+   * - Resource.Loading.Starting/Succeeded/Failed - 资源加载状态，details 包含 res_id
+   * - Controller.Action.Starting/Succeeded/Failed - 控制器动作状态，details 包含 ctrl_id
+   * - Tasker.Task.Starting/Succeeded/Failed - 任务执行状态，details 包含 task_id
+   * - Node.Recognition.Starting/Succeeded/Failed - 节点识别状态
+   * - Node.Action.Starting/Succeeded/Failed - 节点动作状态
+   */
+  async onCallback(callback: (message: string, details: MaaCallbackDetails) => void): Promise<UnlistenFn> {
+    if (!isTauri()) {
+      // 非 Tauri 环境返回空函数
+      return () => {};
+    }
+    
+    return await listen<MaaCallbackEvent>('maa-callback', (event) => {
+      const { message, details } = event.payload;
+      log.debug('MaaCallback:', message, details);
+      
+      try {
+        const parsedDetails = JSON.parse(details) as MaaCallbackDetails;
+        callback(message, parsedDetails);
+      } catch {
+        log.warn('Failed to parse callback details:', details);
+        callback(message, {});
+      }
+    });
+  },
+
+  /**
+   * 等待单个操作完成的一次性回调（适用于截图等需要立即获取结果的场景）
+   * 注意：此函数会阻塞调用者直到回调到达，适合在非 UI 线程或循环中使用
+   * @param idField 要匹配的 ID 字段名（ctrl_id）
+   * @param id 要等待的 ID 值
+   * @param timeout 超时时间（毫秒），默认 10000
+   * @returns 是否成功
+   */
+  async waitForScreencap(id: number, timeout: number = 10000): Promise<boolean> {
+    if (!isTauri()) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return true;
+    }
+
+    return new Promise<boolean>((resolve) => {
+      let unlisten: UnlistenFn | null = null;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        if (unlisten) unlisten();
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+
+      // 设置超时
+      timeoutId = setTimeout(() => {
+        cleanup();
+        log.warn(`截图等待超时, ctrl_id=${id}`);
+        resolve(false);
+      }, timeout);
+
+      // 监听回调
+      this.onCallback((message, details) => {
+        if (details.ctrl_id !== id) return;
+
+        if (message === 'Controller.Action.Succeeded') {
+          cleanup();
+          resolve(true);
+        } else if (message === 'Controller.Action.Failed') {
+          cleanup();
+          resolve(false);
+        }
+      }).then(fn => {
+        unlisten = fn;
+      });
+    });
   },
 };
 

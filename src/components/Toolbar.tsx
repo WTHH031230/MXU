@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CheckSquare,
@@ -39,6 +39,11 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
   } = useAppStore();
 
   const [isStarting, setIsStarting] = useState(false);
+  
+  // 任务队列状态（用于回调处理）
+  const [pendingTaskIds, setPendingTaskIds] = useState<number[]>([]);
+  const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
+  const runningInstanceIdRef = useRef<string | null>(null);
 
   const instance = getActiveInstance();
   const tasks = instance?.selectedTasks || [];
@@ -50,6 +55,70 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
   const isConnected = instanceConnectionStatus[instanceId] === 'Connected';
   const isResourceLoaded = instanceResourceLoaded[instanceId] || false;
   const canRun = isConnected && isResourceLoaded && tasks.some((t) => t.enabled);
+  
+  // 监听任务完成回调
+  useEffect(() => {
+    if (pendingTaskIds.length === 0) return;
+    
+    const currentTaskId = pendingTaskIds[currentTaskIndex];
+    if (currentTaskId === undefined) return;
+    
+    let unlisten: (() => void) | null = null;
+    
+    maaService.onCallback((message, details) => {
+      if (details.task_id !== currentTaskId) return;
+      
+      const runningInstanceId = runningInstanceIdRef.current;
+      if (!runningInstanceId) return;
+      
+      if (message === 'Tasker.Task.Succeeded') {
+        log.info(`任务 ${currentTaskIndex + 1}/${pendingTaskIds.length} 完成`);
+        
+        // 检查是否还有更多任务
+        if (currentTaskIndex + 1 < pendingTaskIds.length) {
+          // 移动到下一个任务
+          const nextIndex = currentTaskIndex + 1;
+          setCurrentTaskIndex(nextIndex);
+          setInstanceCurrentTaskId(runningInstanceId, pendingTaskIds[nextIndex]);
+        } else {
+          // 所有任务完成
+          log.info('所有任务执行完成');
+          
+          // 停止 Agent（如果有）
+          if (projectInterface?.agent) {
+            maaService.stopAgent(runningInstanceId).catch(() => {});
+          }
+          
+          setInstanceTaskStatus(runningInstanceId, 'Succeeded');
+          updateInstance(runningInstanceId, { isRunning: false });
+          setInstanceCurrentTaskId(runningInstanceId, null);
+          setPendingTaskIds([]);
+          setCurrentTaskIndex(0);
+          runningInstanceIdRef.current = null;
+        }
+      } else if (message === 'Tasker.Task.Failed') {
+        log.error('任务执行失败, task_id:', currentTaskId);
+        
+        // 停止 Agent（如果有）
+        if (projectInterface?.agent) {
+          maaService.stopAgent(runningInstanceId).catch(() => {});
+        }
+        
+        setInstanceTaskStatus(runningInstanceId, 'Failed');
+        updateInstance(runningInstanceId, { isRunning: false });
+        setInstanceCurrentTaskId(runningInstanceId, null);
+        setPendingTaskIds([]);
+        setCurrentTaskIndex(0);
+        runningInstanceIdRef.current = null;
+      }
+    }).then(fn => {
+      unlisten = fn;
+    });
+    
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [pendingTaskIds, currentTaskIndex, projectInterface?.agent, setInstanceCurrentTaskId, setInstanceTaskStatus, updateInstance]);
 
   const handleSelectAll = () => {
     if (!instance) return;
@@ -247,35 +316,14 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
 
         log.info('任务已提交, task_ids:', taskIds);
 
-        // 任务已成功提交，取消"启动中"状态
+        // 设置任务队列，由回调监听处理完成状态
+        runningInstanceIdRef.current = instance.id;
+        setPendingTaskIds(taskIds);
+        setCurrentTaskIndex(0);
+        setInstanceCurrentTaskId(instance.id, taskIds[0]);
         setIsStarting(false);
-
-        // 等待所有任务完成
-        for (let i = 0; i < taskIds.length; i++) {
-          const taskId = taskIds[i];
-          setInstanceCurrentTaskId(instance.id, taskId);
-          
-          const status = await maaService.waitTask(instance.id, taskId);
-          log.info(`任务 ${i + 1}/${taskIds.length} 完成, 状态:`, status);
-          
-          if (status === 'Failed') {
-            log.error('任务执行失败, task_id:', taskId);
-            setInstanceTaskStatus(instance.id, 'Failed');
-            break;
-          }
-        }
-
-        // 停止 Agent（如果有）
-        if (projectInterface?.agent) {
-          await maaService.stopAgent(instance.id);
-        }
-
-        log.info('所有任务执行完成');
-        setInstanceTaskStatus(instance.id, 'Succeeded');
-        updateInstance(instance.id, { isRunning: false });
-        setInstanceCurrentTaskId(instance.id, null);
       } catch (err) {
-        log.error('任务执行异常:', err);
+        log.error('任务提交异常:', err);
         // 出错时也尝试停止 Agent
         if (projectInterface?.agent) {
           try {
@@ -286,7 +334,6 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
         }
         updateInstance(instance.id, { isRunning: false });
         setInstanceTaskStatus(instance.id, 'Failed');
-      } finally {
         setIsStarting(false);
       }
     }

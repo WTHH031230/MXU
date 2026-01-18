@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Smartphone,
@@ -52,11 +52,45 @@ export function DeviceSelector({ instanceId, controllerDef, onConnectionChange }
   const [selectedWindow, setSelectedWindow] = useState<Win32Window | null>(null);
 
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  // 等待中的操作 ID（用于回调匹配）
+  const [pendingCtrlId, setPendingCtrlId] = useState<number | null>(null);
 
   const controllerType = controllerDef.type;
 
   // PlayCover 地址输入
   const [playcoverAddress, setPlaycoverAddress] = useState('127.0.0.1:1717');
+  
+  // 监听 MaaFramework 回调事件，处理连接完成
+  useEffect(() => {
+    if (pendingCtrlId === null) return;
+    
+    let unlisten: (() => void) | null = null;
+    
+    maaService.onCallback((message, details) => {
+      if (details.ctrl_id !== pendingCtrlId) return;
+      
+      if (message === 'Controller.Action.Succeeded') {
+        setIsConnected(true);
+        onConnectionChange?.(true);
+        setIsConnecting(false);
+        setPendingCtrlId(null);
+      } else if (message === 'Controller.Action.Failed') {
+        log.error('连接失败');
+        setError('连接失败');
+        setIsConnected(false);
+        onConnectionChange?.(false);
+        setIsConnecting(false);
+        setPendingCtrlId(null);
+      }
+    }).then(fn => {
+      unlisten = fn;
+    });
+    
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [pendingCtrlId, onConnectionChange]);
 
   // 判断是否需要搜索设备（PlayCover 不需要搜索）
   const needsDeviceSearch = controllerType === 'Adb' || controllerType === 'Win32' || controllerType === 'Gamepad';
@@ -163,15 +197,15 @@ export function DeviceSelector({ instanceId, controllerDef, onConnectionChange }
       }
 
       const agentPath = `${basePath}/MaaAgentBinary`;
-      await maaService.connectController(instanceId, config, agentPath);
-      setIsConnected(true);
-      onConnectionChange?.(true);
+      const ctrlId = await maaService.connectController(instanceId, config, agentPath);
+      
+      // 记录等待中的 ctrl_id，后续由回调处理完成状态
+      setPendingCtrlId(ctrlId);
     } catch (err) {
       log.error('连接失败:', err);
       setError(err instanceof Error ? err.message : '连接失败');
       setIsConnected(false);
       onConnectionChange?.(false);
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -226,15 +260,15 @@ export function DeviceSelector({ instanceId, controllerDef, onConnectionChange }
       };
       
       const agentPath = `${basePath}/MaaAgentBinary`;
-      await maaService.connectController(instanceId, config, agentPath);
-      setIsConnected(true);
-      onConnectionChange?.(true);
+      const ctrlId = await maaService.connectController(instanceId, config, agentPath);
+      
+      // 记录等待中的 ctrl_id，后续由回调处理完成状态
+      setPendingCtrlId(ctrlId);
     } catch (err) {
       log.error('自动连接失败:', err);
       setError(err instanceof Error ? err.message : '连接失败');
       setIsConnected(false);
       onConnectionChange?.(false);
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -273,15 +307,15 @@ export function DeviceSelector({ instanceId, controllerDef, onConnectionChange }
       }
       
       const agentPath = `${basePath}/MaaAgentBinary`;
-      await maaService.connectController(instanceId, config, agentPath);
-      setIsConnected(true);
-      onConnectionChange?.(true);
+      const ctrlId = await maaService.connectController(instanceId, config, agentPath);
+      
+      // 记录等待中的 ctrl_id，后续由回调处理完成状态
+      setPendingCtrlId(ctrlId);
     } catch (err) {
       log.error('自动连接失败:', err);
       setError(err instanceof Error ? err.message : '连接失败');
       setIsConnected(false);
       onConnectionChange?.(false);
-    } finally {
       setIsConnecting(false);
     }
   };

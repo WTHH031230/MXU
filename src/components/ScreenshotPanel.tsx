@@ -70,7 +70,7 @@ export function ScreenshotPanel() {
       }
       
       // 等待截图完成
-      const success = await maaService.screencapWait(instanceId, screencapId);
+      const success = await maaService.waitForScreencap(screencapId, 10000);
       if (!success) {
         throw new Error('Screencap failed');
       }

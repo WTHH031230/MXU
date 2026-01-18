@@ -77,6 +77,10 @@ export function ConnectionPanel() {
   const [isResourceLoaded, setIsResourceLoaded] = useState(false);
   const [resourceError, setResourceError] = useState<string | null>(null);
   const [showResourceDropdown, setShowResourceDropdown] = useState(false);
+  
+  // 等待中的操作 ID（用于回调匹配）
+  const [pendingCtrlId, setPendingCtrlId] = useState<number | null>(null);
+  const [pendingResIds, setPendingResIds] = useState<Set<number>>(new Set());
 
   const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
   const translations = interfaceTranslations[langKey];
@@ -152,6 +156,61 @@ export function ConnectionPanel() {
       setIsCollapsed(false);
     }
   }, [activeInstanceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // 监听 MaaFramework 回调事件，处理连接和资源加载完成
+  useEffect(() => {
+    // 没有等待中的操作，不需要监听
+    if (pendingCtrlId === null && pendingResIds.size === 0) return;
+    
+    let unlisten: (() => void) | null = null;
+    
+    maaService.onCallback((message, details) => {
+      // 处理控制器连接回调
+      if (pendingCtrlId !== null && details.ctrl_id === pendingCtrlId) {
+        if (message === 'Controller.Action.Succeeded') {
+          setIsConnected(true);
+          setInstanceConnectionStatus(instanceId, 'Connected');
+          setIsConnecting(false);
+          setPendingCtrlId(null);
+        } else if (message === 'Controller.Action.Failed') {
+          setDeviceError(t('controller.connectionFailed'));
+          setIsConnected(false);
+          setInstanceConnectionStatus(instanceId, 'Disconnected');
+          setIsConnecting(false);
+          setPendingCtrlId(null);
+        }
+      }
+      
+      // 处理资源加载回调
+      if (pendingResIds.size > 0 && details.res_id !== undefined) {
+        if (message === 'Resource.Loading.Succeeded') {
+          setPendingResIds(prev => {
+            const next = new Set(prev);
+            next.delete(details.res_id!);
+            // 所有资源都加载完成
+            if (next.size === 0) {
+              setIsResourceLoaded(true);
+              setInstanceResourceLoaded(instanceId, true);
+              setIsLoadingResource(false);
+            }
+            return next;
+          });
+        } else if (message === 'Resource.Loading.Failed') {
+          setResourceError(t('resource.loadFailed'));
+          setIsResourceLoaded(false);
+          setInstanceResourceLoaded(instanceId, false);
+          setIsLoadingResource(false);
+          setPendingResIds(new Set());
+        }
+      }
+    }).then(fn => {
+      unlisten = fn;
+    });
+    
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [pendingCtrlId, pendingResIds, instanceId, setInstanceConnectionStatus, setInstanceResourceLoaded, t]);
 
   // 判断是否需要搜索设备（PlayCover 不需要搜索）
   const needsDeviceSearch = controllerType === 'Adb' || controllerType === 'Win32' || controllerType === 'Gamepad';
@@ -288,14 +347,14 @@ export function ConnectionPanel() {
       }
 
       const agentPath = `${basePath}/MaaAgentBinary`;
-      await maaService.connectController(instanceId, config, agentPath);
-      setIsConnected(true);
-      setInstanceConnectionStatus(instanceId, 'Connected');
+      const ctrlId = await maaService.connectController(instanceId, config, agentPath);
+      
+      // 记录等待中的 ctrl_id，后续由回调处理完成状态
+      setPendingCtrlId(ctrlId);
     } catch (err) {
       setDeviceError(err instanceof Error ? err.message : t('controller.connectionFailed'));
       setIsConnected(false);
       setInstanceConnectionStatus(instanceId, 'Disconnected');
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -317,14 +376,14 @@ export function ConnectionPanel() {
         const cleanPath = p.replace(/^\.\//, '').replace(/^\.\\/, '');
         return `${basePath}/${cleanPath}`;
       });
-      await maaService.loadResource(instanceId, resourcePaths);
-      setIsResourceLoaded(true);
-      setInstanceResourceLoaded(instanceId, true);
+      const resIds = await maaService.loadResource(instanceId, resourcePaths);
+      
+      // 记录等待中的 res_ids，后续由回调处理完成状态
+      setPendingResIds(new Set(resIds));
     } catch (err) {
       setResourceError(err instanceof Error ? err.message : t('resource.loadFailed'));
       setIsResourceLoaded(false);
       setInstanceResourceLoaded(instanceId, false);
-    } finally {
       setIsLoadingResource(false);
     }
   };
@@ -387,14 +446,14 @@ export function ConnectionPanel() {
       };
       
       const agentPath = `${basePath}/MaaAgentBinary`;
-      await maaService.connectController(instanceId, config, agentPath);
-      setIsConnected(true);
-      setInstanceConnectionStatus(instanceId, 'Connected');
+      const ctrlId = await maaService.connectController(instanceId, config, agentPath);
+      
+      // 记录等待中的 ctrl_id，后续由回调处理完成状态
+      setPendingCtrlId(ctrlId);
     } catch (err) {
       setDeviceError(err instanceof Error ? err.message : t('controller.connectionFailed'));
       setIsConnected(false);
       setInstanceConnectionStatus(instanceId, 'Disconnected');
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -442,14 +501,14 @@ export function ConnectionPanel() {
       }
       
       const agentPath = `${basePath}/MaaAgentBinary`;
-      await maaService.connectController(instanceId, config, agentPath);
-      setIsConnected(true);
-      setInstanceConnectionStatus(instanceId, 'Connected');
+      const ctrlId = await maaService.connectController(instanceId, config, agentPath);
+      
+      // 记录等待中的 ctrl_id，后续由回调处理完成状态
+      setPendingCtrlId(ctrlId);
     } catch (err) {
       setDeviceError(err instanceof Error ? err.message : t('controller.connectionFailed'));
       setIsConnected(false);
       setInstanceConnectionStatus(instanceId, 'Disconnected');
-    } finally {
       setIsConnecting(false);
     }
   };

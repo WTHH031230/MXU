@@ -11,6 +11,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .manage(MaaState::default())
+        .setup(|app| {
+            // 存储 AppHandle 供 MaaFramework 回调使用
+            maa_ffi::set_app_handle(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             maa_commands::maa_init,
             maa_commands::maa_set_resource_dir,
@@ -24,12 +29,10 @@ pub fn run() {
             maa_commands::maa_load_resource,
             maa_commands::maa_is_resource_loaded,
             maa_commands::maa_run_task,
-            maa_commands::maa_wait_task,
             maa_commands::maa_get_task_status,
             maa_commands::maa_stop_task,
             maa_commands::maa_is_running,
             maa_commands::maa_post_screencap,
-            maa_commands::maa_screencap_wait,
             maa_commands::maa_get_cached_image,
             maa_commands::maa_start_tasks,
             maa_commands::maa_stop_agent,

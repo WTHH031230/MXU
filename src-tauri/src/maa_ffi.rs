@@ -17,6 +17,8 @@ use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 use libloading::Library;
+use tauri::{AppHandle, Emitter};
+use serde::Serialize;
 
 // 类型定义 (对应 MaaDef.h)
 pub type MaaBool = u8;
@@ -447,4 +449,57 @@ pub unsafe fn from_cstr(ptr: *const c_char) -> String {
     } else {
         CStr::from_ptr(ptr).to_string_lossy().into_owned()
     }
+}
+
+// ============================================================================
+// 回调系统
+// ============================================================================
+
+/// 全局 AppHandle 存储，用于在回调中发送事件到前端
+static APP_HANDLE: Lazy<Mutex<Option<AppHandle>>> = Lazy::new(|| Mutex::new(None));
+
+/// 设置全局 AppHandle
+pub fn set_app_handle(handle: AppHandle) {
+    if let Ok(mut guard) = APP_HANDLE.lock() {
+        *guard = Some(handle);
+    }
+}
+
+/// MaaFramework 回调事件载荷
+#[derive(Clone, Serialize)]
+pub struct MaaCallbackEvent {
+    /// 消息类型，如 "Resource.Loading.Succeeded", "Controller.Action.Succeeded", "Tasker.Task.Succeeded"
+    pub message: String,
+    /// 详细数据 JSON 字符串
+    pub details: String,
+}
+
+/// MaaFramework 回调处理函数
+/// 由 MaaFramework 在子线程中调用，将消息转发到前端
+extern "C" fn maa_event_callback(
+    _handle: *mut c_void,
+    message: *const c_char,
+    details_json: *const c_char,
+    _trans_arg: *mut c_void,
+) {
+    let message_str = unsafe { from_cstr(message) };
+    let details_str = unsafe { from_cstr(details_json) };
+    
+    println!("[MaaCallback] message: {}, details: {}", message_str, details_str);
+    
+    // 发送事件到前端
+    if let Ok(guard) = APP_HANDLE.lock() {
+        if let Some(handle) = guard.as_ref() {
+            let event = MaaCallbackEvent {
+                message: message_str,
+                details: details_str,
+            };
+            let _ = handle.emit("maa-callback", event);
+        }
+    }
+}
+
+/// 获取回调函数指针
+pub fn get_event_callback() -> MaaEventCallback {
+    Some(maa_event_callback)
 }

@@ -70,7 +70,8 @@ function InstanceCard({
         const screencapId = await maaService.postScreencap(instanceId);
         if (screencapId < 0) return null;
 
-        const success = await maaService.screencapWait(instanceId, screencapId);
+        // 等待截图完成
+        const success = await maaService.waitForScreencap(screencapId, 10000);
         if (!success) return null;
 
         const imageData = await maaService.getCachedImage(instanceId);

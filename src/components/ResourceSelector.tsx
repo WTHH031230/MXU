@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FolderOpen,
@@ -36,12 +36,52 @@ export function ResourceSelector({
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  // 等待中的资源 ID 集合（用于回调匹配）
+  const [pendingResIds, setPendingResIds] = useState<Set<number>>(new Set());
 
   const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
   const translations = interfaceTranslations[langKey];
 
   // 当前选中的资源
   const selectedResource = resources.find(r => r.name === selectedResourceName) || resources[0];
+  
+  // 监听 MaaFramework 回调事件，处理资源加载完成
+  useEffect(() => {
+    if (pendingResIds.size === 0) return;
+    
+    let unlisten: (() => void) | null = null;
+    
+    maaService.onCallback((message, details) => {
+      if (details.res_id === undefined || !pendingResIds.has(details.res_id)) return;
+      
+      if (message === 'Resource.Loading.Succeeded') {
+        setPendingResIds(prev => {
+          const next = new Set(prev);
+          next.delete(details.res_id!);
+          // 所有资源都加载完成
+          if (next.size === 0) {
+            setIsLoaded(true);
+            onLoadStatusChange?.(true);
+            setIsLoading(false);
+          }
+          return next;
+        });
+      } else if (message === 'Resource.Loading.Failed') {
+        setError('资源加载失败');
+        setIsLoaded(false);
+        onLoadStatusChange?.(false);
+        setIsLoading(false);
+        setPendingResIds(new Set());
+      }
+    }).then(fn => {
+      unlisten = fn;
+    });
+    
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [pendingResIds, onLoadStatusChange]);
 
   // 加载资源
   const handleLoad = async () => {
@@ -60,14 +100,14 @@ export function ResourceSelector({
       // 构建完整资源路径
       const resourcePaths = selectedResource.path.map(p => `${basePath}/${p}`);
 
-      await maaService.loadResource(instanceId, resourcePaths);
-      setIsLoaded(true);
-      onLoadStatusChange?.(true);
+      const resIds = await maaService.loadResource(instanceId, resourcePaths);
+      
+      // 记录等待中的 res_ids，后续由回调处理完成状态
+      setPendingResIds(new Set(resIds));
     } catch (err) {
       setError(err instanceof Error ? err.message : '资源加载失败');
       setIsLoaded(false);
       onLoadStatusChange?.(false);
-    } finally {
       setIsLoading(false);
     }
   };
