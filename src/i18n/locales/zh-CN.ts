@@ -200,4 +200,50 @@ export default {
     controllerNotFound: '控制器不存在',
     resourceNotFound: '资源包不存在',
   },
+
+  // 右键菜单
+  contextMenu: {
+    // Tab 右键菜单
+    newTab: '新建标签页',
+    duplicateTab: '复制标签页',
+    renameTab: '重命名',
+    closeTab: '关闭标签页',
+    closeOtherTabs: '关闭其他标签页',
+    closeAllTabs: '关闭所有标签页',
+    closeTabsToRight: '关闭右侧标签页',
+    
+    // 任务右键菜单
+    addTask: '添加任务',
+    duplicateTask: '复制任务',
+    deleteTask: '删除任务',
+    renameTask: '重命名任务',
+    enableTask: '启用任务',
+    disableTask: '禁用任务',
+    moveUp: '上移',
+    moveDown: '下移',
+    moveToTop: '置顶',
+    moveToBottom: '置底',
+    expandOptions: '展开选项',
+    collapseOptions: '折叠选项',
+    selectAll: '全选任务',
+    deselectAll: '取消全选',
+    expandAllTasks: '展开全部',
+    collapseAllTasks: '折叠全部',
+    
+    // 截图面板右键菜单
+    reconnect: '重新连接',
+    forceRefresh: '强制刷新',
+    startStream: '开始实时流',
+    stopStream: '停止实时流',
+    fullscreen: '全屏显示',
+    saveScreenshot: '保存截图',
+    copyScreenshot: '复制截图',
+    
+    // 连接面板右键菜单
+    refreshDevices: '刷新设备列表',
+    disconnect: '断开连接',
+    
+    // 通用
+    openFolder: '打开所在文件夹',
+  },
 };

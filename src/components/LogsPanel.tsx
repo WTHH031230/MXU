@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
 import { useAppStore } from '@/stores/appStore';
+import { ContextMenu, useContextMenu, type MenuItem } from './ContextMenu';
 
 interface LogEntry {
   id: string;
@@ -16,6 +17,7 @@ export function LogsPanel() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const { sidePanelExpanded, toggleSidePanelExpanded } = useAppStore();
+  const { state: menuState, show: showMenu, hide: hideMenu } = useContextMenu();
 
   useEffect(() => {
     if (logsEndRef.current) {
@@ -46,6 +48,41 @@ export function LogsPanel() {
         return 'text-text-secondary';
     }
   };
+
+  // 右键菜单处理
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+
+      const menuItems: MenuItem[] = [
+        {
+          id: 'copy',
+          label: t('logs.copyAll'),
+          icon: Copy,
+          disabled: logs.length === 0,
+          onClick: handleCopyAll,
+        },
+        {
+          id: 'clear',
+          label: t('logs.clear'),
+          icon: Trash2,
+          disabled: logs.length === 0,
+          danger: true,
+          onClick: handleClear,
+        },
+        { id: 'divider-1', label: '', divider: true },
+        {
+          id: 'toggle-panel',
+          label: sidePanelExpanded ? t('logs.collapse') : t('logs.expand'),
+          icon: sidePanelExpanded ? ChevronUp : ChevronDown,
+          onClick: toggleSidePanelExpanded,
+        },
+      ];
+
+      showMenu(e, menuItems);
+    },
+    [t, logs.length, sidePanelExpanded, handleCopyAll, handleClear, toggleSidePanelExpanded, showMenu]
+  );
 
   return (
     <div className="flex-1 flex flex-col bg-bg-secondary rounded-lg border border-border overflow-hidden">
@@ -104,7 +141,10 @@ export function LogsPanel() {
       </div>
 
       {/* 日志内容 */}
-      <div className="flex-1 overflow-y-auto p-2 font-mono text-xs bg-bg-tertiary">
+      <div
+        className="flex-1 overflow-y-auto p-2 font-mono text-xs bg-bg-tertiary"
+        onContextMenu={handleContextMenu}
+      >
         {logs.length === 0 ? (
           <div className="h-full flex items-center justify-center text-text-muted">
             {t('logs.noLogs')}
@@ -126,6 +166,15 @@ export function LogsPanel() {
           </>
         )}
       </div>
+
+      {/* 右键菜单 */}
+      {menuState.isOpen && (
+        <ContextMenu
+          items={menuState.items}
+          position={menuState.position}
+          onClose={hideMenu}
+        />
+      )}
     </div>
   );
 }

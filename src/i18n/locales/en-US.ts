@@ -200,4 +200,50 @@ export default {
     controllerNotFound: 'Controller not found',
     resourceNotFound: 'Resource not found',
   },
+
+  // Context Menu
+  contextMenu: {
+    // Tab context menu
+    newTab: 'New Tab',
+    duplicateTab: 'Duplicate Tab',
+    renameTab: 'Rename',
+    closeTab: 'Close Tab',
+    closeOtherTabs: 'Close Other Tabs',
+    closeAllTabs: 'Close All Tabs',
+    closeTabsToRight: 'Close Tabs to the Right',
+    
+    // Task context menu
+    addTask: 'Add Task',
+    duplicateTask: 'Duplicate Task',
+    deleteTask: 'Delete Task',
+    renameTask: 'Rename Task',
+    enableTask: 'Enable Task',
+    disableTask: 'Disable Task',
+    moveUp: 'Move Up',
+    moveDown: 'Move Down',
+    moveToTop: 'Move to Top',
+    moveToBottom: 'Move to Bottom',
+    expandOptions: 'Expand Options',
+    collapseOptions: 'Collapse Options',
+    selectAll: 'Select All Tasks',
+    deselectAll: 'Deselect All',
+    expandAllTasks: 'Expand All',
+    collapseAllTasks: 'Collapse All',
+    
+    // Screenshot panel context menu
+    reconnect: 'Reconnect',
+    forceRefresh: 'Force Refresh',
+    startStream: 'Start Live Stream',
+    stopStream: 'Stop Live Stream',
+    fullscreen: 'Fullscreen',
+    saveScreenshot: 'Save Screenshot',
+    copyScreenshot: 'Copy Screenshot',
+    
+    // Connection panel context menu
+    refreshDevices: 'Refresh Device List',
+    disconnect: 'Disconnect',
+    
+    // Common
+    openFolder: 'Open Containing Folder',
+  },
 };

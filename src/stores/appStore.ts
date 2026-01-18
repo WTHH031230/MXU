@@ -52,6 +52,16 @@ interface AppState {
   collapseAllTasks: (instanceId: string, expanded: boolean) => void;
   renameTask: (instanceId: string, taskId: string, newName: string) => void;
   
+  // 任务右键菜单操作
+  duplicateTask: (instanceId: string, taskId: string) => void;
+  moveTaskUp: (instanceId: string, taskId: string) => void;
+  moveTaskDown: (instanceId: string, taskId: string) => void;
+  moveTaskToTop: (instanceId: string, taskId: string) => void;
+  moveTaskToBottom: (instanceId: string, taskId: string) => void;
+  
+  // 实例右键菜单操作
+  duplicateInstance: (instanceId: string) => string;
+  
   // 全局 UI 状态
   showAddTaskPanel: boolean;
   setShowAddTaskPanel: (show: boolean) => void;
@@ -369,6 +379,120 @@ export const useAppStore = create<AppState>()(
             : i
         ),
       })),
+      
+      // 复制任务
+      duplicateTask: (instanceId, taskId) => set((state) => ({
+        instances: state.instances.map(i => {
+          if (i.id !== instanceId) return i;
+          
+          const taskIndex = i.selectedTasks.findIndex(t => t.id === taskId);
+          if (taskIndex === -1) return i;
+          
+          const originalTask = i.selectedTasks[taskIndex];
+          const newTask: SelectedTask = {
+            ...originalTask,
+            id: generateId(),
+            optionValues: { ...originalTask.optionValues },
+          };
+          
+          const tasks = [...i.selectedTasks];
+          tasks.splice(taskIndex + 1, 0, newTask);
+          
+          return { ...i, selectedTasks: tasks };
+        }),
+      })),
+      
+      // 上移任务
+      moveTaskUp: (instanceId, taskId) => set((state) => ({
+        instances: state.instances.map(i => {
+          if (i.id !== instanceId) return i;
+          
+          const taskIndex = i.selectedTasks.findIndex(t => t.id === taskId);
+          if (taskIndex <= 0) return i;
+          
+          const tasks = [...i.selectedTasks];
+          [tasks[taskIndex - 1], tasks[taskIndex]] = [tasks[taskIndex], tasks[taskIndex - 1]];
+          
+          return { ...i, selectedTasks: tasks };
+        }),
+      })),
+      
+      // 下移任务
+      moveTaskDown: (instanceId, taskId) => set((state) => ({
+        instances: state.instances.map(i => {
+          if (i.id !== instanceId) return i;
+          
+          const taskIndex = i.selectedTasks.findIndex(t => t.id === taskId);
+          if (taskIndex === -1 || taskIndex >= i.selectedTasks.length - 1) return i;
+          
+          const tasks = [...i.selectedTasks];
+          [tasks[taskIndex], tasks[taskIndex + 1]] = [tasks[taskIndex + 1], tasks[taskIndex]];
+          
+          return { ...i, selectedTasks: tasks };
+        }),
+      })),
+      
+      // 置顶任务
+      moveTaskToTop: (instanceId, taskId) => set((state) => ({
+        instances: state.instances.map(i => {
+          if (i.id !== instanceId) return i;
+          
+          const taskIndex = i.selectedTasks.findIndex(t => t.id === taskId);
+          if (taskIndex <= 0) return i;
+          
+          const tasks = [...i.selectedTasks];
+          const [task] = tasks.splice(taskIndex, 1);
+          tasks.unshift(task);
+          
+          return { ...i, selectedTasks: tasks };
+        }),
+      })),
+      
+      // 置底任务
+      moveTaskToBottom: (instanceId, taskId) => set((state) => ({
+        instances: state.instances.map(i => {
+          if (i.id !== instanceId) return i;
+          
+          const taskIndex = i.selectedTasks.findIndex(t => t.id === taskId);
+          if (taskIndex === -1 || taskIndex >= i.selectedTasks.length - 1) return i;
+          
+          const tasks = [...i.selectedTasks];
+          const [task] = tasks.splice(taskIndex, 1);
+          tasks.push(task);
+          
+          return { ...i, selectedTasks: tasks };
+        }),
+      })),
+      
+      // 复制实例
+      duplicateInstance: (instanceId) => {
+        const state = get();
+        const sourceInstance = state.instances.find(i => i.id === instanceId);
+        if (!sourceInstance) return '';
+        
+        const newId = generateId();
+        const instanceNumber = state.nextInstanceNumber;
+        
+        const newInstance: Instance = {
+          ...sourceInstance,
+          id: newId,
+          name: `${sourceInstance.name} (副本)`,
+          selectedTasks: sourceInstance.selectedTasks.map(t => ({
+            ...t,
+            id: generateId(),
+            optionValues: { ...t.optionValues },
+          })),
+          isRunning: false,
+        };
+        
+        set({
+          instances: [...state.instances, newInstance],
+          activeInstanceId: newId,
+          nextInstanceNumber: instanceNumber + 1,
+        });
+        
+        return newId;
+      },
       
       // 全局 UI 状态
       showAddTaskPanel: false,

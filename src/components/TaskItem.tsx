@@ -1,10 +1,25 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
+import {
+  GripVertical,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  ChevronsUp,
+  ChevronsDown,
+  Check,
+  X,
+  Copy,
+  Edit3,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+} from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { OptionEditor } from './OptionEditor';
+import { ContextMenu, useContextMenu, type MenuItem } from './ContextMenu';
 import type { SelectedTask } from '@/types/interface';
 import clsx from 'clsx';
 
@@ -24,9 +39,17 @@ export function TaskItem({ instanceId, task }: TaskItemProps) {
     toggleTaskExpanded,
     removeTaskFromInstance,
     renameTask,
+    duplicateTask,
+    moveTaskUp,
+    moveTaskDown,
+    moveTaskToTop,
+    moveTaskToBottom,
     resolveI18nText,
     language,
+    getActiveInstance,
   } = useAppStore();
+
+  const { state: menuState, show: showMenu, hide: hideMenu } = useContextMenu();
 
   const {
     attributes,
@@ -74,10 +97,121 @@ export function TaskItem({ instanceId, task }: TaskItemProps) {
     }
   };
 
+  // 右键菜单处理
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const instance = getActiveInstance();
+      if (!instance) return;
+
+      const tasks = instance.selectedTasks;
+      const taskIndex = tasks.findIndex((t) => t.id === task.id);
+      const isFirst = taskIndex === 0;
+      const isLast = taskIndex === tasks.length - 1;
+
+      const menuItems: MenuItem[] = [
+        {
+          id: 'duplicate',
+          label: t('contextMenu.duplicateTask'),
+          icon: Copy,
+          onClick: () => duplicateTask(instanceId, task.id),
+        },
+        {
+          id: 'rename',
+          label: t('contextMenu.renameTask'),
+          icon: Edit3,
+          onClick: () => {
+            setEditName(task.customName || '');
+            setIsEditing(true);
+          },
+        },
+        { id: 'divider-1', label: '', divider: true },
+        {
+          id: 'toggle',
+          label: task.enabled
+            ? t('contextMenu.disableTask')
+            : t('contextMenu.enableTask'),
+          icon: task.enabled ? ToggleLeft : ToggleRight,
+          onClick: () => toggleTaskEnabled(instanceId, task.id),
+        },
+        ...(hasOptions
+          ? [
+              {
+                id: 'expand',
+                label: task.expanded
+                  ? t('contextMenu.collapseOptions')
+                  : t('contextMenu.expandOptions'),
+                icon: task.expanded ? ChevronUp : ChevronDown,
+                onClick: () => toggleTaskExpanded(instanceId, task.id),
+              },
+            ]
+          : []),
+        { id: 'divider-2', label: '', divider: true },
+        {
+          id: 'move-up',
+          label: t('contextMenu.moveUp'),
+          icon: ChevronUp,
+          disabled: isFirst,
+          onClick: () => moveTaskUp(instanceId, task.id),
+        },
+        {
+          id: 'move-down',
+          label: t('contextMenu.moveDown'),
+          icon: ChevronDown,
+          disabled: isLast,
+          onClick: () => moveTaskDown(instanceId, task.id),
+        },
+        {
+          id: 'move-top',
+          label: t('contextMenu.moveToTop'),
+          icon: ChevronsUp,
+          disabled: isFirst,
+          onClick: () => moveTaskToTop(instanceId, task.id),
+        },
+        {
+          id: 'move-bottom',
+          label: t('contextMenu.moveToBottom'),
+          icon: ChevronsDown,
+          disabled: isLast,
+          onClick: () => moveTaskToBottom(instanceId, task.id),
+        },
+        { id: 'divider-3', label: '', divider: true },
+        {
+          id: 'delete',
+          label: t('contextMenu.deleteTask'),
+          icon: Trash2,
+          danger: true,
+          onClick: () => removeTaskFromInstance(instanceId, task.id),
+        },
+      ];
+
+      showMenu(e, menuItems);
+    },
+    [
+      t,
+      task,
+      instanceId,
+      hasOptions,
+      getActiveInstance,
+      duplicateTask,
+      toggleTaskEnabled,
+      toggleTaskExpanded,
+      moveTaskUp,
+      moveTaskDown,
+      moveTaskToTop,
+      moveTaskToBottom,
+      removeTaskFromInstance,
+      showMenu,
+    ]
+  );
+
   return (
     <div
       ref={setNodeRef}
       style={style}
+      onContextMenu={handleContextMenu}
       className={clsx(
         'group bg-bg-secondary rounded-lg border border-border overflow-hidden transition-shadow',
         isDragging && 'shadow-lg opacity-50'
@@ -209,6 +343,15 @@ export function TaskItem({ instanceId, task }: TaskItemProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* 右键菜单 */}
+      {menuState.isOpen && (
+        <ContextMenu
+          items={menuState.items}
+          position={menuState.position}
+          onClose={hideMenu}
+        />
       )}
     </div>
   );

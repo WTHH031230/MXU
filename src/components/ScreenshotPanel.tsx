@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Maximize2, X, Monitor, ChevronDown, ChevronUp, Play, Pause } from 'lucide-react';
+import {
+  Maximize2,
+  X,
+  Monitor,
+  ChevronDown,
+  ChevronUp,
+  Play,
+  Pause,
+  RefreshCw,
+  Download,
+  Copy,
+  Unplug,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { maaService } from '@/services/maaService';
 import { useAppStore } from '@/stores/appStore';
+import { ContextMenu, useContextMenu, type MenuItem } from './ContextMenu';
 import { loggers } from '@/utils/logger';
 
 const log = loggers.ui;
@@ -25,6 +38,8 @@ export function ScreenshotPanel() {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const { state: menuState, show: showMenu, hide: hideMenu } = useContextMenu();
   
   // 用于控制截图流的引用
   const streamingRef = useRef(false);
@@ -212,6 +227,146 @@ export function ScreenshotPanel() {
   // 连接成功后自动开始实时截图（仅当面板可见且未开启时）
   const connectionStatus = instanceId ? instanceConnectionStatus[instanceId] : undefined;
   const prevConnectionStatusRef = useRef<typeof connectionStatus>(undefined);
+
+  // 保存截图
+  const saveScreenshot = useCallback(async () => {
+    if (!screenshotUrl) return;
+
+    try {
+      // 创建下载链接
+      const link = document.createElement('a');
+      link.href = screenshotUrl;
+      link.download = `screenshot_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      log.warn('保存截图失败:', err);
+    }
+  }, [screenshotUrl]);
+
+  // 复制截图到剪贴板
+  const copyScreenshot = useCallback(async () => {
+    if (!screenshotUrl) return;
+
+    try {
+      const response = await fetch(screenshotUrl);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob }),
+      ]);
+    } catch (err) {
+      log.warn('复制截图失败:', err);
+    }
+  }, [screenshotUrl]);
+
+  // 强制刷新截图
+  const forceRefresh = useCallback(async () => {
+    if (!instanceId) return;
+
+    try {
+      const imageData = await captureFrame();
+      if (imageData) {
+        setScreenshotUrl(imageData);
+        setError(null);
+      }
+    } catch (err) {
+      log.warn('强制刷新失败:', err);
+    }
+  }, [instanceId, captureFrame]);
+
+  // 断开连接（销毁实例）
+  const disconnect = useCallback(async () => {
+    if (!instanceId) return;
+
+    try {
+      // 销毁实例会断开连接
+      await maaService.destroyInstance(instanceId);
+      // 更新连接状态
+      useAppStore.getState().setInstanceConnectionStatus(instanceId, 'Disconnected');
+      setScreenshotUrl(null);
+      streamingRef.current = false;
+      setIsStreaming(false);
+    } catch (err) {
+      log.warn('断开连接失败:', err);
+    }
+  }, [instanceId, setIsStreaming]);
+
+  // 右键菜单处理
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isConnected = connectionStatus === 'Connected';
+
+      const menuItems: MenuItem[] = [
+        {
+          id: 'stream',
+          label: isStreaming
+            ? t('contextMenu.stopStream')
+            : t('contextMenu.startStream'),
+          icon: isStreaming ? Pause : Play,
+          disabled: !instanceId || !isConnected,
+          onClick: () => toggleStreaming(),
+        },
+        {
+          id: 'refresh',
+          label: t('contextMenu.forceRefresh'),
+          icon: RefreshCw,
+          disabled: !instanceId || !isConnected,
+          onClick: forceRefresh,
+        },
+        { id: 'divider-1', label: '', divider: true },
+        {
+          id: 'fullscreen',
+          label: t('contextMenu.fullscreen'),
+          icon: Maximize2,
+          disabled: !screenshotUrl,
+          onClick: () => setIsFullscreen(true),
+        },
+        { id: 'divider-2', label: '', divider: true },
+        {
+          id: 'save',
+          label: t('contextMenu.saveScreenshot'),
+          icon: Download,
+          disabled: !screenshotUrl,
+          onClick: saveScreenshot,
+        },
+        {
+          id: 'copy',
+          label: t('contextMenu.copyScreenshot'),
+          icon: Copy,
+          disabled: !screenshotUrl,
+          onClick: copyScreenshot,
+        },
+        { id: 'divider-3', label: '', divider: true },
+        {
+          id: 'disconnect',
+          label: t('contextMenu.disconnect'),
+          icon: Unplug,
+          disabled: !isConnected,
+          danger: true,
+          onClick: disconnect,
+        },
+      ];
+
+      showMenu(e, menuItems);
+    },
+    [
+      t,
+      instanceId,
+      connectionStatus,
+      isStreaming,
+      screenshotUrl,
+      toggleStreaming,
+      forceRefresh,
+      saveScreenshot,
+      copyScreenshot,
+      disconnect,
+      showMenu,
+    ]
+  );
   
   useEffect(() => {
     // 检测连接状态从非 Connected 变为 Connected
@@ -291,7 +446,10 @@ export function ScreenshotPanel() {
       {!isCollapsed && (
         <div className="p-3">
           {/* 截图区域 */}
-          <div className="aspect-video bg-bg-tertiary rounded-md flex items-center justify-center overflow-hidden relative">
+          <div
+            className="aspect-video bg-bg-tertiary rounded-md flex items-center justify-center overflow-hidden relative"
+            onContextMenu={handleContextMenu}
+          >
             {screenshotUrl ? (
               <>
                 <img
@@ -336,6 +494,7 @@ export function ScreenshotPanel() {
           <div 
             className="relative bg-bg-secondary rounded-xl border border-border shadow-2xl max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
+            onContextMenu={handleContextMenu}
           >
             {/* 卡片标题栏 */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-tertiary/50">
@@ -371,6 +530,15 @@ export function ScreenshotPanel() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 右键菜单 */}
+      {menuState.isOpen && (
+        <ContextMenu
+          items={menuState.items}
+          position={menuState.position}
+          onClose={hideMenu}
+        />
       )}
     </div>
   );

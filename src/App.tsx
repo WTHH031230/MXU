@@ -154,6 +154,25 @@ function App() {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
+  // 禁用浏览器默认右键菜单（让自定义菜单生效）
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      // 允许输入框和文本区域的默认右键菜单
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      e.preventDefault();
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => document.removeEventListener('contextmenu', handleContextMenu);
+  }, []);
+
   // 设置页面
   if (currentPage === 'settings') {
     return <SettingsPage />;

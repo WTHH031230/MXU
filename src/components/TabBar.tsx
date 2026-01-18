@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Settings, Sun, Moon, Check, LayoutGrid } from 'lucide-react';
+import { Plus, X, Settings, Sun, Moon, Check, LayoutGrid, Copy, Edit3, XCircle } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import { ContextMenu, useContextMenu, type MenuItem } from './ContextMenu';
 import clsx from 'clsx';
 
 export function TabBar() {
@@ -16,6 +17,7 @@ export function TabBar() {
     removeInstance,
     setActiveInstance,
     renameInstance,
+    duplicateInstance,
     theme,
     setTheme,
     setCurrentPage,
@@ -25,6 +27,8 @@ export function TabBar() {
     dashboardView,
     toggleDashboardView,
   } = useAppStore();
+  
+  const { state: menuState, show: showMenu, hide: hideMenu } = useContextMenu();
 
   const handleNewTab = () => {
     createInstance();
@@ -70,6 +74,71 @@ export function TabBar() {
 
   const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
 
+  // 右键菜单处理
+  const handleTabContextMenu = useCallback(
+    (e: React.MouseEvent, instanceId: string, instanceName: string) => {
+      const instanceIndex = instances.findIndex(i => i.id === instanceId);
+      
+      const menuItems: MenuItem[] = [
+        {
+          id: 'new',
+          label: t('contextMenu.newTab'),
+          icon: Plus,
+          onClick: () => createInstance(),
+        },
+        {
+          id: 'duplicate',
+          label: t('contextMenu.duplicateTab'),
+          icon: Copy,
+          onClick: () => duplicateInstance(instanceId),
+        },
+        {
+          id: 'rename',
+          label: t('contextMenu.renameTab'),
+          icon: Edit3,
+          onClick: () => {
+            setEditingId(instanceId);
+            setEditName(instanceName);
+          },
+        },
+        { id: 'divider-1', label: '', divider: true },
+        {
+          id: 'close',
+          label: t('contextMenu.closeTab'),
+          icon: X,
+          disabled: instances.length <= 1,
+          onClick: () => removeInstance(instanceId),
+        },
+        {
+          id: 'close-others',
+          label: t('contextMenu.closeOtherTabs'),
+          icon: XCircle,
+          disabled: instances.length <= 1,
+          onClick: () => {
+            instances.forEach(inst => {
+              if (inst.id !== instanceId) {
+                removeInstance(inst.id);
+              }
+            });
+          },
+        },
+        {
+          id: 'close-right',
+          label: t('contextMenu.closeTabsToRight'),
+          disabled: instanceIndex >= instances.length - 1,
+          onClick: () => {
+            instances.slice(instanceIndex + 1).forEach(inst => {
+              removeInstance(inst.id);
+            });
+          },
+        },
+      ];
+
+      showMenu(e, menuItems);
+    },
+    [instances, t, createInstance, duplicateInstance, removeInstance, showMenu]
+  );
+
   return (
     <div className="flex items-center h-10 bg-bg-secondary border-b border-border select-none">
       {/* 标签页区域 */}
@@ -79,6 +148,7 @@ export function TabBar() {
             key={instance.id}
             onClick={() => setActiveInstance(instance.id)}
             onDoubleClick={(e) => handleDoubleClick(e, instance.id, instance.name)}
+            onContextMenu={(e) => handleTabContextMenu(e, instance.id, instance.name)}
             className={clsx(
               'group flex items-center gap-2 h-full px-4 cursor-pointer border-r border-border transition-colors min-w-[120px] max-w-[200px]',
               instance.id === activeInstanceId
@@ -195,6 +265,15 @@ export function TabBar() {
           <Settings className="w-4 h-4 text-text-secondary" />
         </button>
       </div>
+
+      {/* 右键菜单 */}
+      {menuState.isOpen && (
+        <ContextMenu
+          items={menuState.items}
+          position={menuState.position}
+          onClose={hideMenu}
+        />
+      )}
     </div>
   );
 }

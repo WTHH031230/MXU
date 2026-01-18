@@ -1,25 +1,54 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutGrid, Monitor, Play, Pause, Circle } from 'lucide-react';
+import {
+  LayoutGrid,
+  Monitor,
+  Play,
+  Pause,
+  Circle,
+  Copy,
+  Edit3,
+  X,
+  RefreshCw,
+  Download,
+  Unplug,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { useAppStore } from '@/stores/appStore';
 import { maaService } from '@/services/maaService';
+import { ContextMenu, useContextMenu, type MenuItem } from './ContextMenu';
 
 interface InstanceCardProps {
   instanceId: string;
   instanceName: string;
   isActive: boolean;
   onSelect: () => void;
+  onRename: () => void;
+  onDuplicate: () => void;
+  onClose: () => void;
+  canClose: boolean;
 }
 
-function InstanceCard({ instanceId, instanceName, isActive, onSelect }: InstanceCardProps) {
+function InstanceCard({
+  instanceId,
+  instanceName,
+  isActive,
+  onSelect,
+  onRename,
+  onDuplicate,
+  onClose,
+  canClose,
+}: InstanceCardProps) {
   const { t } = useTranslation();
   const {
     instanceConnectionStatus,
     instanceTaskStatus,
     instanceScreenshotStreaming,
     setInstanceScreenshotStreaming,
+    setInstanceConnectionStatus,
   } = useAppStore();
+
+  const { state: menuState, show: showMenu, hide: hideMenu } = useContextMenu();
 
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const streamingRef = useRef(false);
@@ -58,8 +87,6 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
 
   // 截图流循环
   const streamLoop = useCallback(async () => {
-    const loopInstanceId = instanceId;
-
     while (streamingRef.current) {
       const now = Date.now();
       const elapsed = now - lastFrameTimeRef.current;
@@ -143,6 +170,133 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
     return 'text-gray-400';
   };
 
+  // 保存截图
+  const saveScreenshot = useCallback(async () => {
+    if (!screenshotUrl) return;
+    try {
+      const link = document.createElement('a');
+      link.href = screenshotUrl;
+      link.download = `screenshot_${instanceName}_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      // 静默处理
+    }
+  }, [screenshotUrl, instanceName]);
+
+  // 断开连接
+  const disconnect = useCallback(async () => {
+    try {
+      await maaService.destroyInstance(instanceId);
+      setInstanceConnectionStatus(instanceId, 'Disconnected');
+      setScreenshotUrl(null);
+      streamingRef.current = false;
+      setInstanceScreenshotStreaming(instanceId, false);
+    } catch {
+      // 静默处理
+    }
+  }, [instanceId, setInstanceConnectionStatus, setInstanceScreenshotStreaming]);
+
+  // 强制刷新
+  const forceRefresh = useCallback(async () => {
+    const imageData = await captureFrame();
+    if (imageData) {
+      setScreenshotUrl(imageData);
+    }
+  }, [captureFrame]);
+
+  // 右键菜单
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const menuItems: MenuItem[] = [
+        {
+          id: 'rename',
+          label: t('contextMenu.renameTab'),
+          icon: Edit3,
+          onClick: onRename,
+        },
+        {
+          id: 'duplicate',
+          label: t('contextMenu.duplicateTab'),
+          icon: Copy,
+          onClick: onDuplicate,
+        },
+        { id: 'divider-1', label: '', divider: true },
+        {
+          id: 'stream',
+          label: isStreaming
+            ? t('contextMenu.stopStream')
+            : t('contextMenu.startStream'),
+          icon: isStreaming ? Pause : Play,
+          disabled: !isConnected,
+          onClick: () => {
+            if (!instanceId || !isConnected) return;
+            if (isStreaming) {
+              streamingRef.current = false;
+              setInstanceScreenshotStreaming(instanceId, false);
+            } else {
+              streamingRef.current = true;
+              setInstanceScreenshotStreaming(instanceId, true);
+              streamLoop();
+            }
+          },
+        },
+        {
+          id: 'refresh',
+          label: t('contextMenu.forceRefresh'),
+          icon: RefreshCw,
+          disabled: !isConnected,
+          onClick: forceRefresh,
+        },
+        {
+          id: 'save',
+          label: t('contextMenu.saveScreenshot'),
+          icon: Download,
+          disabled: !screenshotUrl,
+          onClick: saveScreenshot,
+        },
+        { id: 'divider-2', label: '', divider: true },
+        {
+          id: 'disconnect',
+          label: t('contextMenu.disconnect'),
+          icon: Unplug,
+          disabled: !isConnected,
+          danger: true,
+          onClick: disconnect,
+        },
+        {
+          id: 'close',
+          label: t('contextMenu.closeTab'),
+          icon: X,
+          disabled: !canClose,
+          danger: true,
+          onClick: onClose,
+        },
+      ];
+
+      showMenu(e, menuItems);
+    },
+    [
+      t,
+      isConnected,
+      isStreaming,
+      screenshotUrl,
+      canClose,
+      onRename,
+      onDuplicate,
+      onClose,
+      toggleStreaming,
+      forceRefresh,
+      saveScreenshot,
+      disconnect,
+      showMenu,
+    ]
+  );
+
   const getStatusText = () => {
     if (taskStatus === 'Running') return t('dashboard.running');
     if (taskStatus === 'Succeeded') return t('dashboard.succeeded');
@@ -155,6 +309,7 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
   return (
     <div
       onClick={onSelect}
+      onContextMenu={handleContextMenu}
       className={clsx(
         'group relative bg-bg-secondary rounded-xl border-2 overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg',
         isActive ? 'border-accent shadow-md' : 'border-border hover:border-accent/50'
@@ -226,17 +381,42 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
           <div className="absolute inset-0 rounded-xl border-2 border-green-500/50 animate-pulse" />
         </div>
       )}
+
+      {/* 右键菜单 */}
+      {menuState.isOpen && (
+        <ContextMenu
+          items={menuState.items}
+          position={menuState.position}
+          onClose={hideMenu}
+        />
+      )}
     </div>
   );
 }
 
 export function DashboardView() {
   const { t } = useTranslation();
-  const { instances, activeInstanceId, setActiveInstance, toggleDashboardView } = useAppStore();
+  const {
+    instances,
+    activeInstanceId,
+    setActiveInstance,
+    toggleDashboardView,
+    duplicateInstance,
+    removeInstance,
+    renameInstance,
+  } = useAppStore();
 
   const handleSelectInstance = (instanceId: string) => {
     setActiveInstance(instanceId);
     toggleDashboardView();
+  };
+
+  const handleRename = (instanceId: string, currentName: string) => {
+    // TODO: 实现重命名弹窗
+    const newName = window.prompt('重命名实例', currentName);
+    if (newName && newName.trim()) {
+      renameInstance(instanceId, newName.trim());
+    }
   };
 
   return (
@@ -284,6 +464,10 @@ export function DashboardView() {
                 instanceName={instance.name}
                 isActive={instance.id === activeInstanceId}
                 onSelect={() => handleSelectInstance(instance.id)}
+                onRename={() => handleRename(instance.id, instance.name)}
+                onDuplicate={() => duplicateInstance(instance.id)}
+                onClose={() => removeInstance(instance.id)}
+                canClose={instances.length > 1}
               />
             ))}
           </div>
