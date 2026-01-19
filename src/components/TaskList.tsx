@@ -8,6 +8,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  type Modifier,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -50,6 +51,12 @@ export function TaskList() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // 禁止 X 方向拖动，仅允许垂直排序
+  const restrictHorizontalMovement: Modifier = ({ transform }) => ({
+    ...transform,
+    x: 0,
+  });
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -149,11 +156,12 @@ export function TaskList() {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto p-3" onContextMenu={handleListContextMenu}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3" onContextMenu={handleListContextMenu}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
+          modifiers={[restrictHorizontalMovement]}
         >
           <SortableContext
             items={tasks.map((t) => t.id)}

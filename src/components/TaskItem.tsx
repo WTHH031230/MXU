@@ -105,8 +105,13 @@ export function TaskItem({ instanceId, task }: TaskItemProps) {
     isDragging,
   } = useSortable({ id: task.id });
 
+  // 禁止 X 方向位移，仅允许垂直拖动
+  const constrainedTransform = transform
+    ? { ...transform, x: 0 }
+    : null;
+
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Transform.toString(constrainedTransform),
     transition,
   };
 
