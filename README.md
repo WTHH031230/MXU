@@ -1,6 +1,6 @@
 # MXU
 
-**MXU** 是一个基于 [MaaFramework ProjectInterface V2](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-标准化接口设计.md) 协议的通用 GUI 客户端，使用 Tauri + React + TypeScript 构建。
+**MXU** 是一个基于 [MaaFramework ProjectInterface V2](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/3.3-ProjectInterfaceV2%E5%8D%8F%E8%AE%AE.md) 协议的通用 GUI 客户端，使用 Tauri + React + TypeScript 构建。
 
 它可以解析任何符合 PI V2 标准的 `interface.json` 文件，为 MaaFramework 生态中的自动化项目提供开箱即用的图形界面。
 
