@@ -42,15 +42,17 @@ export function LogsPanel() {
   const getLogColor = (type: LogType) => {
     switch (type) {
       case 'success':
-        return 'text-success';
+        return 'text-green-500 dark:text-green-400';
       case 'warning':
-        return 'text-warning';
+        return 'text-amber-500 dark:text-amber-400';
       case 'error':
-        return 'text-error';
+        return 'text-red-500 dark:text-red-400';
       case 'agent':
-        return 'text-purple-500 dark:text-purple-400';
+        return 'text-gray-400 dark:text-gray-500';
       case 'focus':
-        return 'text-accent';
+        return 'text-orange-500 dark:text-orange-400';
+      case 'info':
+        return 'text-blue-500 dark:text-blue-400';
       default:
         return 'text-text-secondary';
     }
