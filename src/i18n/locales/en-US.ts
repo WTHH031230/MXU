@@ -51,6 +51,8 @@ export default {
     dragToReorder: 'Drag to reorder',
     startTasks: 'Start Tasks',
     stopTasks: 'Stop Tasks',
+    startingTasks: 'Starting...',
+    stoppingTasks: 'Stopping...',
   },
 
   // Task item

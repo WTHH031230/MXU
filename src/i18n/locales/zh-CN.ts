@@ -51,6 +51,8 @@ export default {
     dragToReorder: '拖拽以重新排序',
     startTasks: '开始任务',
     stopTasks: '停止任务',
+    startingTasks: '启动中...',
+    stoppingTasks: '停止中...',
   },
 
   // 任务项

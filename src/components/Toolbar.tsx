@@ -41,6 +41,7 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
   } = useAppStore();
 
   const [isStarting, setIsStarting] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [showSchedulePanel, setShowSchedulePanel] = useState(false);
   
   // 任务队列状态（用于回调处理）
@@ -253,6 +254,7 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
       // 停止任务
       try {
         log.info('停止任务...');
+        setIsStopping(true);
         await maaService.stopTask(instance.id);
         // 如果配置了 agent，也停止 agent
         if (projectInterface?.agent) {
@@ -263,6 +265,8 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
         setInstanceCurrentTaskId(instance.id, null);
       } catch (err) {
         log.error('停止任务失败:', err);
+      } finally {
+        setIsStopping(false);
       }
     } else {
       // 启动任务
@@ -442,12 +446,16 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
         {/* 开始/停止按钮 */}
         <button
           onClick={handleStartStop}
-          disabled={isDisabled || isStarting}
+          disabled={isDisabled || isStarting || isStopping}
           className={clsx(
             'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-            instance?.isRunning
+            isStarting
+              ? 'bg-success text-white'
+              : isStopping
+              ? 'bg-warning text-white'
+              : instance?.isRunning
               ? 'bg-error hover:bg-error/90 text-white'
-              : isDisabled || isStarting
+              : isDisabled
               ? 'bg-bg-active text-text-muted cursor-not-allowed'
               : 'bg-accent hover:bg-accent-hover text-white'
           )}
@@ -456,7 +464,12 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
           {isStarting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>启动中...</span>
+              <span>{t('taskList.startingTasks')}</span>
+            </>
+          ) : isStopping ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>{t('taskList.stoppingTasks')}</span>
             </>
           ) : instance?.isRunning ? (
             <>
