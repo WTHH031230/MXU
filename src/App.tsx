@@ -116,6 +116,7 @@ function App() {
     setProjectInterface,
     setInterfaceTranslations,
     setBasePath,
+    basePath,
     importConfig,
     createInstance,
     theme,
@@ -211,6 +212,34 @@ function App() {
     
     setWindowTitle(title);
   }, [projectInterface, language, interfaceTranslations]);
+
+  // 设置窗口图标（根据 ProjectInterface V2 协议）
+  useEffect(() => {
+    if (!projectInterface?.icon || !isTauri()) return;
+    
+    const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
+    const translations = interfaceTranslations[langKey];
+    
+    // icon 字段支持国际化
+    const iconPath = resolveI18nText(projectInterface.icon, translations);
+    if (!iconPath) return;
+    
+    // 拼接完整路径（相对于 basePath）
+    const fullIconPath = `${basePath}/${iconPath}`;
+    
+    const setIcon = async () => {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const currentWindow = getCurrentWindow();
+        await currentWindow.setIcon(fullIconPath);
+        log.info('窗口图标已设置:', fullIconPath);
+      } catch (err) {
+        log.warn('设置窗口图标失败:', err);
+      }
+    };
+    
+    setIcon();
+  }, [projectInterface, language, interfaceTranslations, basePath]);
 
   // 加载 interface.json 和配置文件
   const loadInterface = async () => {
