@@ -192,21 +192,21 @@ function App() {
     }
   }, [setDownloadStatus, setDownloadProgress, setDownloadSavePath]);
 
-  // 设置窗口标题
+  // 设置窗口标题（根据 ProjectInterface V2 协议）
   useEffect(() => {
     if (!projectInterface) return;
     
     const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
     const translations = interfaceTranslations[langKey];
     
-    // 优先使用 title 字段，否则使用 name + version
+    // 优先使用 title 字段（支持国际化），否则使用 name + version
+    // 注意：协议规定 title 默认为 name + version，不是 label + version
     let title: string;
     if (projectInterface.title) {
       title = resolveI18nText(projectInterface.title, translations);
     } else {
-      const name = resolveI18nText(projectInterface.label, translations) || projectInterface.name;
       const version = projectInterface.version;
-      title = version ? `${name} v${version}` : name;
+      title = version ? `${projectInterface.name} ${version}` : projectInterface.name;
     }
     
     setWindowTitle(title);
@@ -519,24 +519,24 @@ function App() {
     );
   }
 
-  // 计算显示标题
+  // 计算显示标题（根据 ProjectInterface V2 协议）
   const getDisplayTitle = () => {
     if (!projectInterface) return { title: 'MXU', subtitle: 'MaaFramework 下一代通用 GUI' };
     
     const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
     const translations = interfaceTranslations[langKey];
     
-    // 优先使用 title 字段，否则使用 label/name + version
+    // 优先使用 title 字段（支持国际化），否则使用 name + version
+    // 注意：协议规定 title 默认为 name + version，不是 label + version
     let title: string;
     if (projectInterface.title) {
       title = resolveI18nText(projectInterface.title, translations);
     } else {
-      const name = resolveI18nText(projectInterface.label, translations) || projectInterface.name;
       const version = projectInterface.version;
-      title = version ? `${name} v${version}` : name;
+      title = version ? `${projectInterface.name} v${version}` : projectInterface.name;
     }
     
-    // 副标题：使用 description 或默认
+    // 副标题：使用 description（支持国际化）或默认
     const subtitle = projectInterface.description 
       ? resolveI18nText(projectInterface.description, translations)
       : 'MaaFramework 下一代通用 GUI';
