@@ -66,6 +66,9 @@ async function setWindowTitle(title: string) {
 const MIN_WINDOW_WIDTH = 800;
 const MIN_WINDOW_HEIGHT = 500;
 
+// 左侧面板最小宽度（确保工具栏按钮文字不换行）
+const MIN_LEFT_PANEL_WIDTH = 618;
+
 /**
  * 验证窗口尺寸是否有效
  */
@@ -176,9 +179,11 @@ function App() {
         // 如果宽度小于最小宽度的一半 (160px)，折叠
         store.setRightPanelCollapsed(true);
       } else {
-        // 否则展开，并更新宽度（限制在 320-800 之间）
+        // 否则展开，并更新宽度（限制在 320-最大可用宽度 之间）
+        // 最大宽度 = 窗口宽度 - 左侧最小宽度 - 分隔条宽度(约4px)
+        const maxWidth = Math.min(800, document.body.clientWidth - MIN_LEFT_PANEL_WIDTH - 4);
         store.setRightPanelCollapsed(false);
-        const clampedWidth = Math.max(320, Math.min(800, newWidth));
+        const clampedWidth = Math.max(320, Math.min(maxWidth, newWidth));
         store.setRightPanelWidth(clampedWidth);
       }
     };
@@ -778,7 +783,10 @@ function App() {
         /* 主内容区 */
         <div className="flex-1 flex overflow-hidden">
           {/* 左侧任务列表区 */}
-          <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+          <div
+            className="flex-1 flex flex-col border-r border-border"
+            style={{ minWidth: MIN_LEFT_PANEL_WIDTH }}
+          >
             {/* 任务列表 */}
             <TaskList />
 
