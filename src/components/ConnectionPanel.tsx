@@ -46,6 +46,9 @@ const CACHE_CLEANUP_TIMEOUT = 30000;
 // 全局监听器是否已启动
 let globalListenerStarted = false;
 
+// 记录每个实例是否已尝试过自动重连（模块级变量，避免组件卸载后重置）
+const autoReconnectAttempted = new Set<string>();
+
 // 启动全局回调监听器
 function startGlobalCallbackListener() {
   if (globalListenerStarted) return;
@@ -389,9 +392,6 @@ export function ConnectionPanel() {
   // 记录上一次的控制器名称，用于检测切换
   const prevControllerNameRef = useRef<string | undefined>(currentControllerName);
 
-  // 记录每个实例是否已尝试过自动重连（避免重复尝试）
-  const autoReconnectAttemptedRef = useRef<Set<string>>(new Set());
-
   // 当控制器切换时自动触发设备搜索
   useEffect(() => {
     const prevName = prevControllerNameRef.current;
@@ -411,7 +411,7 @@ export function ConnectionPanel() {
     if (isConnected || isConnecting || isSearching) return;
 
     // 如果该实例已经尝试过自动重连，不再重复
-    if (autoReconnectAttemptedRef.current.has(instanceId)) return;
+    if (autoReconnectAttempted.has(instanceId)) return;
 
     const savedDevice = activeInstance.savedDevice;
     const hasHistoricalDevice =
@@ -422,12 +422,12 @@ export function ConnectionPanel() {
 
     if (hasHistoricalDevice && needsDeviceSearch) {
       // 标记该实例已尝试过自动重连
-      autoReconnectAttemptedRef.current.add(instanceId);
+      autoReconnectAttempted.add(instanceId);
       // 触发搜索并自动连接（handleSearch 内部已有匹配+自动连接逻辑）
       handleSearch();
     } else if (hasHistoricalDevice && controllerType === 'PlayCover') {
       // PlayCover 不需要搜索，直接连接
-      autoReconnectAttemptedRef.current.add(instanceId);
+      autoReconnectAttempted.add(instanceId);
       handleConnect();
     }
   }, [instanceId, activeInstance, currentController, isConnected, isConnecting, isSearching]); // eslint-disable-line react-hooks/exhaustive-deps
