@@ -474,23 +474,21 @@ export const useAppStore = create<AppState>()(
       const instanceNumber = get().nextInstanceNumber;
       const pi = get().projectInterface;
 
-      // 初始化默认选中的任务
+      // 初始化所有任务，default_check 为 true 的任务默认勾选
       const defaultTasks: SelectedTask[] = [];
       if (pi) {
-        pi.task
-          .filter((t) => t.default_check)
-          .forEach((task) => {
-            // 递归初始化所有选项（包括嵌套选项）
-            const optionValues =
-              task.option && pi.option ? initializeAllOptionValues(task.option, pi.option) : {};
-            defaultTasks.push({
-              id: generateId(),
-              taskName: task.name,
-              enabled: true,
-              optionValues,
-              expanded: false,
-            });
+        pi.task.forEach((task) => {
+          // 递归初始化所有选项（包括嵌套选项）
+          const optionValues =
+            task.option && pi.option ? initializeAllOptionValues(task.option, pi.option) : {};
+          defaultTasks.push({
+            id: generateId(),
+            taskName: task.name,
+            enabled: !!task.default_check,
+            optionValues,
+            expanded: false,
           });
+        });
       }
 
       const newInstance: Instance = {
