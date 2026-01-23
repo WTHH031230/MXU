@@ -197,12 +197,19 @@ export function LogsPanel() {
             <Trash2 className="w-4 h-4" />
           </button>
           {/* 展开/折叠上方面板 */}
-          <ChevronDown
+          <span
             className={clsx(
-              'w-4 h-4 text-text-muted transition-transform duration-150 ease-out',
-              sidePanelExpanded && 'rotate-180',
+              'p-1.5 rounded-md transition-colors',
+              !sidePanelExpanded ? 'text-accent bg-accent-light' : 'text-text-secondary',
             )}
-          />
+          >
+            <ChevronDown
+              className={clsx(
+                'w-4 h-4 transition-transform duration-150 ease-out',
+                sidePanelExpanded && 'rotate-180',
+              )}
+            />
+          </span>
         </div>
       </div>
 
