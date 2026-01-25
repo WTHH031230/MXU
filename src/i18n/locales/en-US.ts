@@ -544,7 +544,7 @@ export default {
       'Running from the root of a drive (like C:\\ or D:\\) can cause issues. Please move it to a folder, like "D:\\MyApps\\".',
     tempTitle: 'Looks like you ran it directly from the archive',
     tempDescription:
-      "The program is running from a temporary folder. It may disappear when closed. Please extract the archive to a folder first, then run the program from there.",
+      'The program is running from a temporary folder. It may disappear when closed. Please extract the archive to a folder first, then run the program from there.',
     hint: 'Tip: We recommend extracting to a dedicated folder like "D:\\MaaXXX". Avoid Desktop or Downloads for easier management.',
     exit: 'Exit',
   },

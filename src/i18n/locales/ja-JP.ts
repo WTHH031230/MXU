@@ -291,8 +291,7 @@ export default {
   // 新規ユーザーガイド
   onboarding: {
     title: 'ここから始めましょう',
-    message:
-      'まず「接続設定」でデバイスを選択してリソースを読み込み、その後タスクを実行できます。',
+    message: 'まず「接続設定」でデバイスを選択してリソースを読み込み、その後タスクを実行できます。',
     gotIt: '了解しました',
   },
 
@@ -364,7 +363,8 @@ export default {
     downloadComplete: 'ダウンロード完了',
     downloadFailed: 'ダウンロードに失敗しました',
     viewDetails: '詳細を表示',
-    noDownloadUrl: 'ダウンロード URL がありません。CDK を入力するか、ネットワーク環境を確認してください',
+    noDownloadUrl:
+      'ダウンロード URL がありません。CDK を入力するか、ネットワーク環境を確認してください',
     openFolder: 'フォルダを開く',
     retry: '再試行',
     preparingDownload: 'ダウンロードを準備中...',
