@@ -71,10 +71,13 @@ export function OnboardingOverlay() {
   if (!isVisible) return null;
 
   // 连接设置卡片的位置参数
-  const cardTop = 76 + 12; // 标签栏高度 + padding
-  const cardHeight = 220; // 连接设置卡片的大致高度
-  const cardRight = 12; // 右侧 padding
-  const cardWidth = rightPanelWidth - 6; // 卡片宽度（减去一些边距）
+  const cardTop = 79; // 标签栏高度 + padding
+  const cardHeight = 222; // 连接设置卡片的大致高度
+  const cardRight = 5; // 右侧 padding
+  const cardWidth = rightPanelWidth - 12; // 卡片宽度（减去一些边距）
+
+  // 遮罩区域宽度（绿框左边缘到视口右边的距离）
+  const rightMaskWidth = cardRight + cardWidth; // = rightPanelWidth - 7
 
   return (
     <div
@@ -82,17 +85,17 @@ export function OnboardingOverlay() {
     >
       {/* 半透明遮罩，只露出连接设置卡片 */}
       <div className="absolute inset-0 pointer-events-auto">
-        {/* 左侧遮罩 */}
+        {/* 左侧遮罩 - 从左边铺到绿框左边缘 */}
         <div
           className="absolute top-0 left-0 bottom-0 bg-black/40 backdrop-blur-[1px]"
-          style={{ right: `calc(${rightPanelWidth}px + 4px)` }}
+          style={{ right: `${rightMaskWidth}px` }}
           onClick={handleDismiss}
         />
         {/* 右上遮罩（标签栏 + 连接设置上方） */}
         <div
           className="absolute top-0 right-0 bg-black/40 backdrop-blur-[1px]"
           style={{
-            width: `calc(${rightPanelWidth}px + 4px)`,
+            width: `${rightMaskWidth}px`,
             height: `${cardTop}px`,
           }}
           onClick={handleDismiss}
@@ -101,7 +104,7 @@ export function OnboardingOverlay() {
         <div
           className="absolute right-0 bottom-0 bg-black/40 backdrop-blur-[1px]"
           style={{
-            width: `calc(${rightPanelWidth}px + 4px)`,
+            width: `${rightMaskWidth}px`,
             top: `${cardTop + cardHeight}px`,
           }}
           onClick={handleDismiss}
