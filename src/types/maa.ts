@@ -128,8 +128,8 @@ export function parseWin32ScreencapMethod(name: string): number {
   if (method !== undefined) {
     return Number(method);
   }
-  // 默认使用 DXGI_DesktopDup
-  return Number(Win32ScreencapMethod.DXGI_DesktopDup);
+  // 默认使用 FramePool
+  return Number(Win32ScreencapMethod.FramePool);
 }
 
 /** 解析 Win32 输入方法名称 */

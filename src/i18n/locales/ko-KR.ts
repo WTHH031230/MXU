@@ -345,7 +345,7 @@ export default {
     downloadComplete: '다운로드 완료',
     downloadFailed: '다운로드 실패',
     viewDetails: '상세 보기',
-    noDownloadUrl: '다운로드 URL이 없습니다. CDK를 입력하거나 GitHub URL을 설정하세요',
+    noDownloadUrl: '다운로드 URL이 없습니다. CDK를 입력하거나 네트워크 환경을 확인하세요',
     openFolder: '폴더 열기',
     retry: '재시도',
     preparingDownload: '다운로드 준비 중...',

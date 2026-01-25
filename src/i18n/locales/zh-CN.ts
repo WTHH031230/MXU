@@ -348,7 +348,7 @@ export default {
     downloadComplete: '下载完成',
     downloadFailed: '下载失败',
     viewDetails: '查看详情',
-    noDownloadUrl: '无可用下载链接，请填写 CDK 或配置 GitHub 地址',
+    noDownloadUrl: '无可用下载链接，请填写 CDK 或检查网络环境',
     openFolder: '打开目录',
     retry: '重试',
     preparingDownload: '准备下载...',

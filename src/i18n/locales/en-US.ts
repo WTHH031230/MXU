@@ -350,7 +350,7 @@ export default {
     downloadComplete: 'Download Complete',
     downloadFailed: 'Download Failed',
     viewDetails: 'View Details',
-    noDownloadUrl: 'No download URL available. Please enter CDK or configure GitHub URL.',
+    noDownloadUrl: 'No download URL available. Please fill in CDK or check network environment',
     openFolder: 'Open Folder',
     retry: 'Retry',
     preparingDownload: 'Preparing download...',

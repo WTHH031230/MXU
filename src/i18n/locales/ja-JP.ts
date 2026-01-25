@@ -351,7 +351,7 @@ export default {
     downloadComplete: 'ダウンロード完了',
     downloadFailed: 'ダウンロードに失敗しました',
     viewDetails: '詳細を表示',
-    noDownloadUrl: 'ダウンロード URL がありません。CDK を入力するか、GitHub URL を設定してください',
+    noDownloadUrl: 'ダウンロード URL がありません。CDK を入力するか、ネットワーク環境を確認してください',
     openFolder: 'フォルダを開く',
     retry: '再試行',
     preparingDownload: 'ダウンロードを準備中...',
