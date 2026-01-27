@@ -1025,6 +1025,12 @@ pub fn maa_run_task(
                 (lib.maa_tasker_add_sink)(tasker, get_event_callback(), std::ptr::null_mut());
             }
 
+            // 添加 Context Sink，用于接收 Node 级别的通知（包含 focus 消息）
+            debug!("Adding tasker context sink...");
+            unsafe {
+                (lib.maa_tasker_add_context_sink)(tasker, get_event_callback(), std::ptr::null_mut());
+            }
+
             // 绑定资源和控制器
             unsafe {
                 (lib.maa_tasker_bind_resource)(tasker, resource);
@@ -1349,6 +1355,13 @@ pub async fn maa_start_tasks(
                 (lib.maa_tasker_add_sink)(tasker, get_event_callback(), std::ptr::null_mut());
             }
             debug!("[start_tasks] Tasker sink added");
+
+            // 添加 Context Sink，用于接收 Node 级别的通知（包含 focus 消息）
+            debug!("[start_tasks] Adding tasker context sink...");
+            unsafe {
+                (lib.maa_tasker_add_context_sink)(tasker, get_event_callback(), std::ptr::null_mut());
+            }
+            debug!("[start_tasks] Tasker context sink added");
 
             // 绑定资源和控制器
             debug!("[start_tasks] Binding resource...");

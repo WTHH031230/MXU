@@ -183,6 +183,8 @@ type FnMaaTaskerRunning = unsafe extern "C" fn(*mut MaaTasker) -> MaaBool;
 type FnMaaTaskerPostStop = unsafe extern "C" fn(*mut MaaTasker) -> MaaId;
 type FnMaaTaskerAddSink =
     unsafe extern "C" fn(*mut MaaTasker, MaaEventCallback, *mut c_void) -> MaaId;
+type FnMaaTaskerAddContextSink =
+    unsafe extern "C" fn(*mut MaaTasker, MaaEventCallback, *mut c_void) -> MaaId;
 type FnMaaTaskerOverridePipeline =
     unsafe extern "C" fn(*mut MaaTasker, MaaId, *const c_char) -> MaaBool;
 
@@ -294,6 +296,7 @@ pub struct MaaLibrary {
     pub maa_tasker_running: FnMaaTaskerRunning,
     pub maa_tasker_post_stop: FnMaaTaskerPostStop,
     pub maa_tasker_add_sink: FnMaaTaskerAddSink,
+    pub maa_tasker_add_context_sink: FnMaaTaskerAddContextSink,
     /// 可选函数：旧版本 MaaFramework 可能不支持
     pub maa_tasker_override_pipeline: Option<FnMaaTaskerOverridePipeline>,
 
@@ -496,6 +499,7 @@ impl MaaLibrary {
                 maa_tasker_running: load_fn!(framework_lib, "MaaTaskerRunning"),
                 maa_tasker_post_stop: load_fn!(framework_lib, "MaaTaskerPostStop"),
                 maa_tasker_add_sink: load_fn!(framework_lib, "MaaTaskerAddSink"),
+                maa_tasker_add_context_sink: load_fn!(framework_lib, "MaaTaskerAddContextSink"),
                 maa_tasker_override_pipeline: load_fn_optional!(
                     framework_lib,
                     "MaaTaskerOverridePipeline"
