@@ -481,7 +481,11 @@ export function useMaaAgentLogger() {
             const { instance_id, line } = event.payload;
 
             // 复用 resolveFocusContent 解析内容，支持国际化、URL、文件、Markdown、{image} 等
-            resolveFocusContent(line, {} as MaaCallbackDetails & Record<string, unknown>, instance_id)
+            resolveFocusContent(
+              line,
+              {} as MaaCallbackDetails & Record<string, unknown>,
+              instance_id,
+            )
               .then((resolved) => {
                 if (cancelled) return;
                 addLog(instance_id, {

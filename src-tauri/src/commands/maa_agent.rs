@@ -453,9 +453,7 @@ pub async fn maa_start_tasks(
                     .instances
                     .lock()
                     .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
-                let instance = instances
-                    .get(&instance_id)
-                    .ok_or("Instance not found")?;
+                let instance = instances.get(&instance_id).ok_or("Instance not found")?;
                 instance.controller.ok_or("Controller not found")?
             };
 
@@ -466,7 +464,10 @@ pub async fn maa_start_tasks(
                 resource.as_ptr()
             );
             let res_result = unsafe {
-                (lib.maa_agent_client_register_resource_sink)(agent_client.as_ptr(), resource.as_ptr())
+                (lib.maa_agent_client_register_resource_sink)(
+                    agent_client.as_ptr(),
+                    resource.as_ptr(),
+                )
             };
             debug!("[agent] Resource sink registered, result: {}", res_result);
 
@@ -479,7 +480,10 @@ pub async fn maa_start_tasks(
             let ctrl_result = unsafe {
                 (lib.maa_agent_client_register_controller_sink)(agent_client.as_ptr(), controller)
             };
-            debug!("[agent] Controller sink registered, result: {}", ctrl_result);
+            debug!(
+                "[agent] Controller sink registered, result: {}",
+                ctrl_result
+            );
 
             // 注册 Tasker sink（同时注册 Tasker 和 Context sink）
             debug!(

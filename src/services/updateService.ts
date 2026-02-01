@@ -458,14 +458,11 @@ function getDownloadExtensions(): string[] {
   const os = getOS();
   if (os === 'windows') {
     return ['.zip', '.exe'];
-  }
-  else if (os === 'linux') {
+  } else if (os === 'linux') {
     return ['.zip', '.tar.gz', '.tgz'];
-  }
-  else if (os === 'darwin') {
+  } else if (os === 'darwin') {
     return ['.zip', '.tar.gz', '.tgz', '.dmg'];
-  } 
-  else {
+  } else {
     return ['.zip'];
   }
 }
