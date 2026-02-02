@@ -160,6 +160,14 @@ pub fn run() {
             commands::system::get_arch,
             commands::system::get_system_info,
         ])
+        .on_window_event(|window, event| {
+            // 窗口关闭时清理所有 agent 子进程
+            if let tauri::WindowEvent::Destroyed = event {
+                if let Some(state) = window.try_state::<Arc<MaaState>>() {
+                    state.cleanup_all_agent_children();
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
