@@ -5,7 +5,7 @@ import type { UpdateChannel, ProxySettings } from '@/types/config';
 import type { UpdateInfo, DownloadProgress } from '@/stores/appStore';
 import { loggers } from '@/utils/logger';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { openUrl, openPath } from '@tauri-apps/plugin-opener';
 import { exists } from '@tauri-apps/plugin-fs';
 import { join, dirname } from '@tauri-apps/api/path';
 import { invoke } from '@tauri-apps/api/core';
@@ -856,18 +856,43 @@ export interface InstallUpdateOptions {
 }
 
 /**
+ * 判断文件是否为可执行安装程序（exe/dmg），这类文件应直接打开而非解压
+ */
+function isExecutableInstaller(filePath: string): boolean {
+  const lower = filePath.toLowerCase();
+  return lower.endsWith('.exe') || lower.endsWith('.dmg');
+}
+
+/**
  * 安装更新包
- * 1. 解压更新包
- * 2. 检查是否为增量包（存在 changes.json）
- * 3. 增量包：删除 deleted 文件，复制覆盖
- * 4. 全量包：删除同名文件夹，复制覆盖
- * 5. 清理临时文件
- * 6. 如果失败，尝试兜底：创建 v版本号 文件夹
+ * 1. 如果是 exe/dmg 文件，直接打开（调用系统默认程序）
+ * 2. 否则解压更新包（支持 zip/tar.gz/tgz）
+ * 3. 检查是否为增量包（存在 changes.json）
+ * 4. 增量包：删除 deleted 文件，复制覆盖
+ * 5. 全量包：删除同名文件夹，复制覆盖
+ * 6. 清理临时文件
+ * 7. 如果失败，尝试兜底：创建 v版本号 文件夹
  */
 export async function installUpdate(options: InstallUpdateOptions): Promise<boolean> {
   const { zipPath, targetDir, newVersion, onProgress } = options;
 
   log.info(`开始安装更新: ${zipPath} -> ${targetDir}`);
+
+  // 对于 exe/dmg 文件，直接打开而不是解压
+  if (isExecutableInstaller(zipPath)) {
+    log.info(`检测到可执行安装程序，直接打开: ${zipPath}`);
+    onProgress?.('opening', zipPath);
+
+    try {
+      await openPath(zipPath);
+      log.info('已打开安装程序');
+      onProgress?.('done');
+      return true;
+    } catch (error) {
+      log.error('打开安装程序失败:', error);
+      throw error;
+    }
+  }
 
   // 生成临时解压目录
   const extractDir = await join(await dirname(zipPath), 'update_extract');
