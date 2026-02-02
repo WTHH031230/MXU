@@ -459,9 +459,9 @@ function getDownloadExtensions(): string[] {
   if (os === 'windows') {
     return ['.zip', '.exe'];
   } else if (os === 'linux') {
-    return ['.zip', '.tar.gz', '.tgz'];
+    return ['.zip', '.tar.gz'];
   } else if (os === 'darwin') {
-    return ['.zip', '.tar.gz', '.tgz', '.dmg'];
+    return ['.zip', '.tar.gz', '.dmg'];
   } else {
     return ['.zip'];
   }
