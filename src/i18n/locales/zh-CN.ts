@@ -133,6 +133,7 @@ export default {
       noSavedDevice: '没有保存的设备配置',
       connectFailed: '自动连接失败',
       resourceFailed: '资源加载失败',
+      startFailed: '任务启动失败',
       needConfig: '请先连接设备并加载资源，或在连接面板保存设备配置',
     },
   },

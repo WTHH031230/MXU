@@ -136,6 +136,7 @@ export default {
       noSavedDevice: 'No saved device configuration',
       connectFailed: 'Auto connect failed',
       resourceFailed: 'Resource loading failed',
+      startFailed: 'Failed to start tasks',
       needConfig:
         'Please connect device and load resource first, or save device config in connection panel',
     },

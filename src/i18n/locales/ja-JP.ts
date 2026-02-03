@@ -133,6 +133,7 @@ export default {
       noSavedDevice: '保存されたデバイス設定がありません',
       connectFailed: '自動接続に失敗しました',
       resourceFailed: 'リソースの読み込みに失敗しました',
+      startFailed: 'タスクの開始に失敗しました',
       needConfig:
         'まずデバイスを接続してリソースを読み込むか、接続パネルでデバイス設定を保存してください',
     },

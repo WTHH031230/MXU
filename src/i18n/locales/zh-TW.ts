@@ -130,6 +130,7 @@ export default {
       noSavedDevice: '沒有儲存的裝置設定',
       connectFailed: '自動連接失敗',
       resourceFailed: '資源載入失敗',
+      startFailed: '任務啟動失敗',
       needConfig: '請先連接裝置並載入資源，或在連接面板儲存裝置設定',
     },
   },

@@ -133,6 +133,7 @@ export default {
       noSavedDevice: '저장된 기기 설정이 없습니다',
       connectFailed: '자동 연결에 실패했습니다',
       resourceFailed: '리소스 로딩에 실패했습니다',
+      startFailed: '작업 시작에 실패했습니다',
       needConfig: '먼저 기기를 연결하고 리소스를 로드하거나 연결 패널에서 기기 설정을 저장하세요',
     },
   },
