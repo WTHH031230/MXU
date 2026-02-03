@@ -16,6 +16,7 @@ import {
   saveUpdateCompleteInfo,
   clearPendingUpdateInfo,
   FallbackUpdateError,
+  isExecutableInstaller,
 } from '@/services/updateService';
 import { ReleaseNotes, DownloadProgressBar } from './UpdateInfoCard';
 import { loggers } from '@/utils/logger';
@@ -204,13 +205,18 @@ export function InstallConfirmModal() {
     t,
   ]);
 
-  // 安装完成后自动重启
+  // 安装完成后自动重启（对于可执行安装程序什么都不做，让安装程序自己处理）
   useEffect(() => {
     if (installStatus === 'completed' && !autoRestartTriggered.current && !isJustUpdatedMode) {
       autoRestartTriggered.current = true;
+      // 如果是可执行安装程序（exe/dmg），什么都不做，让打开的安装程序处理后续
+      if (downloadSavePath && isExecutableInstaller(downloadSavePath)) {
+        // 不关闭弹窗、不重启、不清除更新信息
+        return;
+      }
       handleRestart();
     }
-  }, [installStatus, isJustUpdatedMode, handleRestart]);
+  }, [installStatus, isJustUpdatedMode, handleRestart, downloadSavePath]);
 
   // 如果没有打开模态框，或者既没有更新信息也没有刚更新完成信息，则不渲染
   if (!showInstallConfirmModal || (!updateInfo && !justUpdatedInfo)) return null;

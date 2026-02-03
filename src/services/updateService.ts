@@ -859,7 +859,7 @@ export interface InstallUpdateOptions {
 /**
  * 判断文件是否为可执行安装程序（exe/dmg），这类文件应直接打开而非解压
  */
-function isExecutableInstaller(filePath: string): boolean {
+export function isExecutableInstaller(filePath: string): boolean {
   const lower = filePath.toLowerCase();
   return lower.endsWith('.exe') || lower.endsWith('.dmg');
 }
