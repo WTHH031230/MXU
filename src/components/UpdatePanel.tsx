@@ -88,7 +88,7 @@ export function UpdatePanel({ onClose, anchorRef }: UpdatePanelProps) {
       loggers.ui.error('下载失败:', error);
       setDownloadStatus('failed');
     }
-  }, [updateInfo, basePath, setDownloadStatus, setDownloadProgress, setDownloadSavePath]);
+  }, [updateInfo, dataPath, setDownloadStatus, setDownloadProgress, setDownloadSavePath]);
 
   // 自动下载已由 App.tsx 在检查更新后立即触发，此处不再重复处理
 

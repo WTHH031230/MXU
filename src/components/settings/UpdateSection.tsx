@@ -157,7 +157,7 @@ export function UpdateSection() {
     },
     [
       updateInfo,
-      basePath,
+      dataPath,
       setDownloadStatus,
       setDownloadProgress,
       setDownloadSavePath,
@@ -219,7 +219,7 @@ export function UpdateSection() {
             channel: mirrorChyanSettings.channel,
             userAgent: 'MXU',
             githubUrl: projectInterface!.github,
-            basePath,
+            basePath: dataPath,
             projectName: projectInterface!.name,
           });
 
@@ -249,7 +249,7 @@ export function UpdateSection() {
       downloadStatus,
       updateInfo,
       projectInterface,
-      basePath,
+      dataPath,
       resetDownloadState,
       setUpdateCheckLoading,
       setUpdateInfo,
@@ -315,7 +315,7 @@ export function UpdateSection() {
         channel: mirrorChyanSettings.channel,
         userAgent: 'MXU',
         githubUrl: projectInterface.github,
-        basePath,
+        basePath: dataPath,
         projectName: projectInterface.name,
       });
 

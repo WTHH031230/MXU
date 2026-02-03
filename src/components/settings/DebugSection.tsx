@@ -151,15 +151,15 @@ export function DebugSection() {
 
   // 调试：打开配置目录
   const handleOpenConfigDir = async () => {
-    if (!isTauri() || !basePath) {
-      loggers.ui.warn('仅 Tauri 环境支持打开目录, basePath:', basePath);
+    if (!isTauri() || !dataPath) {
+      loggers.ui.warn('仅 Tauri 环境支持打开目录, dataPath:', dataPath);
       return;
     }
 
     try {
       const { openPath } = await import('@tauri-apps/plugin-opener');
       const { join } = await import('@tauri-apps/api/path');
-      const configPath = await join(basePath, 'config');
+      const configPath = await join(dataPath, 'config');
       loggers.ui.info('打开配置目录:', configPath);
       await openPath(configPath);
     } catch (err) {
@@ -169,15 +169,15 @@ export function DebugSection() {
 
   // 调试：打开日志目录
   const handleOpenLogDir = async () => {
-    if (!isTauri() || !basePath) {
-      loggers.ui.warn('仅 Tauri 环境支持打开目录, basePath:', basePath);
+    if (!isTauri() || !dataPath) {
+      loggers.ui.warn('仅 Tauri 环境支持打开目录, dataPath:', dataPath);
       return;
     }
 
     try {
       const { openPath } = await import('@tauri-apps/plugin-opener');
       const { join } = await import('@tauri-apps/api/path');
-      const logPath = await join(basePath, 'debug');
+      const logPath = await join(dataPath, 'debug');
       loggers.ui.info('打开日志目录:', logPath);
       await openPath(logPath);
     } catch (err) {

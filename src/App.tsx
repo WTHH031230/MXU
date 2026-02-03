@@ -88,7 +88,6 @@ function App() {
     setBasePath,
     setDataPath,
     basePath,
-    dataPath,
     importConfig,
     createInstance,
     theme,
