@@ -189,8 +189,12 @@ export default {
     programPlaceholder: '프로그램 경로를 입력하거나 찾아보기...',
     args: '추가 인수',
     argsPlaceholder: '추가 인수 입력 (선택사항)',
-    argsHint: '인수는 공백으로 구분됩니다. 프로그램이 종료될 때까지 대기합니다.',
     browse: '찾아보기',
+    waitForExit: '종료 대기',
+    waitForExitHint: '활성화하면 프로그램이 완료될 때까지 대기합니다. 비활성화하면 즉시 계속됩니다.',
+    delaySeconds: '지연 시간',
+    delaySecondsHint: '프로그램 시작 후 지정된 초 만큼 대기 (0은 대기 없음)',
+    seconds: '초',
     // 로그 메시지
     preActionStarting: '전처리 동작 실행 중...',
     preActionCompleted: '전처리 동작 완료',

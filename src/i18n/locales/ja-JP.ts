@@ -190,8 +190,12 @@ export default {
     programPlaceholder: 'プログラムパスを入力または参照...',
     args: '追加引数',
     argsPlaceholder: '追加引数を入力（オプション）',
-    argsHint: '引数はスペースで区切ります。プログラムが終了するまで待機します。',
     browse: '参照',
+    waitForExit: '終了を待機',
+    waitForExitHint: '有効にするとプログラムの完了を待機します。無効にすると即座に続行します。',
+    delaySeconds: '遅延時間',
+    delaySecondsHint: 'プログラム起動後、指定秒数待機します（0は待機なし）',
+    seconds: '秒',
     // ログメッセージ
     preActionStarting: '前処理アクションを実行中...',
     preActionCompleted: '前処理アクション完了',

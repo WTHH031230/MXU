@@ -189,8 +189,12 @@ export default {
     programPlaceholder: '输入程序路径或点击右侧浏览...',
     args: '附加参数',
     argsPlaceholder: '输入附加参数（可选）',
-    argsHint: '参数之间用空格分隔，程序执行时会等待其退出后再继续',
     browse: '浏览',
+    waitForExit: '等待进程退出',
+    waitForExitHint: '开启后会等待程序执行完毕再继续，关闭则启动后立即继续',
+    delaySeconds: '延迟等待',
+    delaySecondsHint: '启动程序后等待指定秒数再继续（0 表示不等待）',
+    seconds: '秒',
     // 日志消息
     preActionStarting: '正在执行前置动作...',
     preActionCompleted: '前置动作执行完成',

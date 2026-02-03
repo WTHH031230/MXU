@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, FolderOpen, X, Play, Flag } from 'lucide-react';
+import { ChevronRight, X, Play, Flag } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import type { ActionConfig } from '@/types/interface';
 import clsx from 'clsx';
-import { open } from '@tauri-apps/plugin-dialog';
-import { isTauri } from '@tauri-apps/api/core';
+import { FileField, TextField, SwitchField, NumberField } from './FormControls';
 
 interface ActionItemProps {
   instanceId: string;
@@ -19,6 +18,8 @@ const defaultAction: ActionConfig = {
   enabled: false,
   program: '',
   args: '',
+  waitForExit: false,
+  delaySeconds: 0,
 };
 
 export function ActionItem({ instanceId, type, action, disabled }: ActionItemProps) {
@@ -59,27 +60,6 @@ export function ActionItem({ instanceId, type, action, disabled }: ActionItemPro
     e.stopPropagation();
     if (disabled) return;
     updateAction({ enabled: !currentAction.enabled });
-  };
-
-  // 选择程序文件
-  const handleSelectProgram = async () => {
-    if (!isTauri()) return;
-    
-    try {
-      const selected = await open({
-        multiple: false,
-        filters: [
-          { name: 'Executable', extensions: ['exe', 'bat', 'cmd', 'ps1', 'sh'] },
-          { name: 'All Files', extensions: ['*'] },
-        ],
-      });
-      
-      if (selected && typeof selected === 'string') {
-        updateAction({ program: selected });
-      }
-    } catch (err) {
-      console.error('Failed to open file dialog:', err);
-    }
   };
 
   // 判断是否有有效配置（有程序路径）
@@ -172,60 +152,45 @@ export function ActionItem({ instanceId, type, action, disabled }: ActionItemPro
         <div className="overflow-hidden min-h-0">
           <div className="border-t border-border bg-bg-tertiary p-3 space-y-3">
             {/* 程序路径 */}
-            <div className="space-y-1">
-              <label className="text-xs text-text-secondary">{t('action.program')}</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={currentAction.program}
-                  onChange={(e) => updateAction({ program: e.target.value })}
-                  placeholder={t('action.programPlaceholder')}
-                  disabled={disabled}
-                  className={clsx(
-                    'flex-1 px-2.5 py-1.5 text-sm rounded-md border',
-                    'bg-bg-primary text-text-primary border-border',
-                    'focus:outline-none focus:ring-1 focus:ring-accent/20 focus:border-accent',
-                    'placeholder:text-text-muted',
-                    disabled && 'cursor-not-allowed opacity-50',
-                  )}
-                />
-                {isTauri() && (
-                  <button
-                    onClick={handleSelectProgram}
-                    disabled={disabled}
-                    className={clsx(
-                      'px-2.5 py-1.5 rounded-md border border-border',
-                      'bg-bg-secondary hover:bg-bg-hover text-text-secondary',
-                      'transition-colors',
-                      disabled && 'cursor-not-allowed opacity-50',
-                    )}
-                    title={t('action.browse')}
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
+            <FileField
+              label={t('action.program')}
+              value={currentAction.program}
+              onChange={(v) => updateAction({ program: v })}
+              placeholder={t('action.programPlaceholder')}
+              disabled={disabled}
+            />
 
             {/* 附加参数 */}
-            <div className="space-y-1">
-              <label className="text-xs text-text-secondary">{t('action.args')}</label>
-              <input
-                type="text"
-                value={currentAction.args}
-                onChange={(e) => updateAction({ args: e.target.value })}
-                placeholder={t('action.argsPlaceholder')}
+            <TextField
+              label={t('action.args')}
+              value={currentAction.args}
+              onChange={(v) => updateAction({ args: v })}
+              placeholder={t('action.argsPlaceholder')}
+              disabled={disabled}
+            />
+
+            {/* 等待进程退出开关 */}
+            <SwitchField
+              label={t('action.waitForExit')}
+              hint={t('action.waitForExitHint')}
+              value={currentAction.waitForExit}
+              onChange={(v) => updateAction({ waitForExit: v })}
+              disabled={disabled}
+            />
+
+            {/* 不等待时显示延迟输入框 */}
+            {!currentAction.waitForExit && (
+              <NumberField
+                label={t('action.delaySeconds')}
+                hint={t('action.delaySecondsHint')}
+                value={currentAction.delaySeconds}
+                onChange={(v) => updateAction({ delaySeconds: v })}
+                min={0}
+                step={5}
+                suffix={t('action.seconds')}
                 disabled={disabled}
-                className={clsx(
-                  'w-full px-2.5 py-1.5 text-sm rounded-md border',
-                  'bg-bg-primary text-text-primary border-border',
-                  'focus:outline-none focus:ring-1 focus:ring-accent/20 focus:border-accent',
-                  'placeholder:text-text-muted',
-                  disabled && 'cursor-not-allowed opacity-50',
-                )}
               />
-              <p className="text-[10px] text-text-muted">{t('action.argsHint')}</p>
-            </div>
+            )}
           </div>
         </div>
       </div>

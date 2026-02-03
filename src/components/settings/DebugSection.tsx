@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bug, RefreshCw, Maximize2, FolderOpen, ScrollText, Trash2, Network } from 'lucide-react';
-import clsx from 'clsx';
 
 import { useAppStore } from '@/stores/appStore';
 import { defaultWindowSize } from '@/types/config';
@@ -9,6 +8,7 @@ import { clearAllCache, getCacheStats } from '@/services/cacheService';
 import { maaService } from '@/services/maaService';
 import { loggers } from '@/utils/logger';
 import { isTauri } from '@/utils/windowUtils';
+import { SwitchButton } from '@/components/FormControls';
 
 export function DebugSection() {
   const { t } = useTranslation();
@@ -317,20 +317,7 @@ export function DebugSection() {
               <p className="text-xs text-text-muted mt-0.5">{t('debug.devModeHint')}</p>
             </div>
           </div>
-          <button
-            onClick={() => setDevMode(!devMode)}
-            className={clsx(
-              'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
-              devMode ? 'bg-accent' : 'bg-bg-active',
-            )}
-          >
-            <span
-              className={clsx(
-                'absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-                devMode ? 'translate-x-5' : 'translate-x-0',
-              )}
-            />
-          </button>
+          <SwitchButton value={devMode} onChange={(v) => setDevMode(v)} />
         </div>
 
         {/* 保存调试图像 */}
@@ -342,20 +329,7 @@ export function DebugSection() {
               <p className="text-xs text-text-muted mt-0.5">{t('debug.saveDrawHint')}</p>
             </div>
           </div>
-          <button
-            onClick={() => setSaveDraw(!saveDraw)}
-            className={clsx(
-              'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
-              saveDraw ? 'bg-accent' : 'bg-bg-active',
-            )}
-          >
-            <span
-              className={clsx(
-                'absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-                saveDraw ? 'translate-x-5' : 'translate-x-0',
-              )}
-            />
-          </button>
+          <SwitchButton value={saveDraw} onChange={(v) => setSaveDraw(v)} />
         </div>
 
         {/* 通信兼容模式 */}
@@ -367,20 +341,7 @@ export function DebugSection() {
               <p className="text-xs text-text-muted mt-0.5">{t('debug.tcpCompatModeHint')}</p>
             </div>
           </div>
-          <button
-            onClick={() => setTcpCompatMode(!tcpCompatMode)}
-            className={clsx(
-              'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
-              tcpCompatMode ? 'bg-accent' : 'bg-bg-active',
-            )}
-          >
-            <span
-              className={clsx(
-                'absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-                tcpCompatMode ? 'translate-x-5' : 'translate-x-0',
-              )}
-            />
-          </button>
+          <SwitchButton value={tcpCompatMode} onChange={(v) => setTcpCompatMode(v)} />
         </div>
       </div>
     </section>

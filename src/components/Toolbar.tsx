@@ -203,6 +203,8 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
                 runningInstance.postAction.program,
                 runningInstance.postAction.args,
                 basePath,
+                runningInstance.postAction.waitForExit ?? true,
+                runningInstance.postAction.delaySeconds ?? 0,
               ).then((exitCode) => {
                 if (exitCode !== 0) {
                   log.warn('后置动作退出码非零:', exitCode);
@@ -278,6 +280,8 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
                 runningInstance.postAction.program,
                 runningInstance.postAction.args,
                 basePath,
+                runningInstance.postAction.waitForExit ?? true,
+                runningInstance.postAction.delaySeconds ?? 0,
               ).then((exitCode) => {
                 if (exitCode !== 0) {
                   log.warn('后置动作退出码非零:', exitCode);
@@ -1079,6 +1083,8 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
               instance.preAction.program,
               instance.preAction.args,
               basePath,
+              instance.preAction.waitForExit ?? true,
+              instance.preAction.delaySeconds ?? 0,
             );
             if (exitCode !== 0) {
               log.warn('前置动作退出码非零:', exitCode);

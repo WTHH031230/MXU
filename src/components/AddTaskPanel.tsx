@@ -121,6 +121,8 @@ const defaultAction: ActionConfig = {
   enabled: true,
   program: '',
   args: '',
+  waitForExit: false,
+  delaySeconds: 0,
 };
 
 export function AddTaskPanel() {

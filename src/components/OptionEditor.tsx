@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import { Info, AlertCircle, Loader2, FileText, Link, ChevronDown, Check } from 'lucide-react';
 import { getInterfaceLangKey } from '@/i18n';
 import { findSwitchCase } from '@/utils/optionHelpers';
+import { SwitchButton, TextInput } from './FormControls';
 
 /** 异步加载图标组件 */
 function AsyncIcon({
@@ -186,21 +187,13 @@ function InputField({
             </div>
           )}
         </div>
-        <input
-          type="text"
+        <TextInput
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder={input.default}
           disabled={disabled}
-          className={clsx(
-            'flex-1 px-3 py-1.5 text-sm rounded-md border',
-            'bg-bg-secondary text-text-primary',
-            'focus:outline-none focus:ring-1',
-            disabled && 'opacity-60 cursor-not-allowed',
-            validationError
-              ? 'border-error focus:border-error focus:ring-error/20'
-              : 'border-border focus:border-accent focus:ring-accent/20',
-          )}
+          hasError={!!validationError}
+          className="flex-1"
         />
       </div>
       {validationError && (
@@ -273,28 +266,16 @@ export function OptionEditor({
       <div className={clsx('space-y-2', depth > 0 && 'ml-4 pl-3 border-l-2 border-border')}>
         <div className="flex items-center justify-between">
           <OptionLabel label={optionLabel} icon={optionDef.icon} basePath={basePath} />
-          <button
-            onClick={() => {
-              if (disabled) return;
+          <SwitchButton
+            value={isChecked}
+            onChange={(checked) => {
               setTaskOptionValue(instanceId, taskId, optionKey, {
                 type: 'switch',
-                value: !isChecked,
+                value: checked,
               });
             }}
             disabled={disabled}
-            className={clsx(
-              'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
-              isChecked ? 'bg-accent' : 'bg-bg-active',
-              disabled && 'opacity-60 cursor-not-allowed',
-            )}
-          >
-            <span
-              className={clsx(
-                'absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-                isChecked ? 'translate-x-5' : 'translate-x-0',
-              )}
-            />
-          </button>
+          />
         </div>
         <OptionDescription
           description={optionDescription}

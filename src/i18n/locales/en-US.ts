@@ -193,8 +193,12 @@ export default {
     programPlaceholder: 'Enter program path or browse...',
     args: 'Arguments',
     argsPlaceholder: 'Enter additional arguments (optional)',
-    argsHint: 'Arguments are separated by spaces. The program will run and wait for it to exit before continuing.',
     browse: 'Browse',
+    waitForExit: 'Wait for Exit',
+    waitForExitHint: 'When enabled, waits for the program to finish before continuing. When disabled, continues immediately after starting.',
+    delaySeconds: 'Delay',
+    delaySecondsHint: 'Wait for specified seconds after starting the program (0 means no delay)',
+    seconds: 'seconds',
     // Log messages
     preActionStarting: 'Running pre-action...',
     preActionCompleted: 'Pre-action completed',
